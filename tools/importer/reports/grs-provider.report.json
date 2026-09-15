@@ -1,0 +1,13 @@
+{
+  "status": "success",
+  "url": "https://provider.bluemedadvgrhs.com/grs-provider/",
+  "path": "grs-provider",
+  "timestamp": "2026-09-10T22:04:14.432Z",
+  "title": "Home | Blue Medicare Advantage",
+  "template": "grs-provider",
+  "blocks": [
+    "hero",
+    "cards",
+    "columns"
+  ]
+}

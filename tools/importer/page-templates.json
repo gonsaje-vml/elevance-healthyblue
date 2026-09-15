@@ -1,0 +1,119 @@
+{
+  "metadata": {
+    "projectType": "da"
+  },
+  "templates": [
+    {
+      "name": "grs-provider",
+      "urls": [
+        "https://provider.bluemedadvgrhs.com/grs-provider/"
+      ],
+      "representativeUrl": "https://provider.bluemedadvgrhs.com/grs-provider/",
+      "description": "Blue Medicare Advantage provider portal landing page: welcome hero, quick-action cards, Availity access columns, and default-content sections for provider news, tools & resources, and a join-network CTA.",
+      "urlPattern": "/*",
+      "blocks": [
+        {
+          "name": "hero",
+          "instances": [
+            "body > main > div.container.home_page > section.wide_image",
+            ".wide_image"
+          ]
+        },
+        {
+          "name": "cards",
+          "instances": [
+            "#main > div.content_container > section.information_links",
+            ".information_links"
+          ]
+        },
+        {
+          "name": "columns",
+          "instances": [
+            "#main > div.content_container > section.availity-section",
+            ".availity-section"
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "rc2",
+          "name": "Welcome hero",
+          "selector": [
+            ".wide_image",
+            "body > main > div.container.home_page > section.wide_image"
+          ],
+          "style": null,
+          "blocks": [
+            "hero"
+          ],
+          "defaultContent": []
+        },
+        {
+          "id": "rc3",
+          "name": "Quick-action links",
+          "selector": [
+            ".information_links",
+            "#main > div.content_container > section.information_links"
+          ],
+          "style": null,
+          "blocks": [
+            "cards"
+          ],
+          "defaultContent": []
+        },
+        {
+          "id": "rc4",
+          "name": "Availity access",
+          "selector": [
+            ".availity-section",
+            "#main > div.content_container > section.center.content_column_2.with_coloredHmePage.availity-section.no-top-space_bfr.no-top-space"
+          ],
+          "style": null,
+          "blocks": [
+            "columns"
+          ],
+          "defaultContent": []
+        },
+        {
+          "id": "rc5",
+          "name": "Provider News",
+          "selector": [
+            ".gray-div",
+            "#main > div.content_container > section.center.content_column_2.gray-div"
+          ],
+          "style": null,
+          "blocks": [],
+          "defaultContent": [
+            "#main > div.content_container > section.center.content_column_2.gray-div"
+          ]
+        },
+        {
+          "id": "rc6",
+          "name": "Provider tools & resources",
+          "selector": [
+            ".tools_resources",
+            "#main > div.content_container > section.center.tools_resources"
+          ],
+          "style": null,
+          "blocks": [],
+          "defaultContent": [
+            "#main > div.content_container > section.center.tools_resources"
+          ]
+        },
+        {
+          "id": "rc7",
+          "name": "Join network CTA",
+          "selector": [
+            ".call_to_action",
+            "#main > div.content_container > section.call_to_action"
+          ],
+          "style": null,
+          "blocks": [],
+          "defaultContent": [
+            "#main > div.content_container > section.call_to_action"
+          ]
+        }
+      ]
+    }
+  ]
+}

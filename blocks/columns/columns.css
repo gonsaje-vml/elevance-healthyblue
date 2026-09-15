@@ -1,0 +1,61 @@
+.columns > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.columns img {
+  width: 100%;
+}
+
+.columns > div > div {
+  order: 1;
+}
+
+.columns > div > .columns-img-col {
+  order: 0;
+}
+
+.columns > div > .columns-img-col img {
+  display: block;
+}
+
+@media (width >= 900px) {
+  .columns > div {
+    align-items: stretch;
+    flex-direction: unset;
+    gap: 40px;
+  }
+
+  .columns > div > div {
+    flex: 1;
+    order: unset;
+  }
+}
+
+/*
+ * Availity access layout: wide content column beside a bordered call-out box.
+ * The second column renders as a bordered "Register free now" card.
+ */
+.columns.block > div > div:last-child {
+  align-self: flex-start;
+  box-sizing: border-box;
+  padding: 24px 28px;
+  border: 1px solid var(--brand-border);
+  border-radius: 6px;
+  background-color: #fafbfc;
+}
+
+.columns.block > div > div:last-child h3 {
+  margin-top: 0;
+}
+
+@media (width >= 900px) {
+  /* left column wider than the call-out box */
+  .columns.block > div > div:first-child {
+    flex: 2;
+  }
+
+  .columns.block > div > div:last-child {
+    flex: 1;
+  }
+}
