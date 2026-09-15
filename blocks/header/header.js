@@ -1,31 +1,28 @@
-import { fetchPlaceholders, getMetadata } from '../../scripts/aem.js';
+import {
+  decorateIcons,
+  fetchPlaceholders,
+  getMetadata,
+} from '../../scripts/aem.js';
+import { loadFragment } from '../fragment/fragment.js';
+
+async function loadFirstFragment([path, ...remainingPaths]) {
+  if (!path) return null;
+  const fragment = await loadFragment(path);
+  return fragment || loadFirstFragment(remainingPaths);
+}
 
 /**
- * Loads the nav fragment using a metadata-independent dual fetch:
- *   1. /content/nav.plain.html  — localhost / aem up
- *   2. /nav.plain.html          — DA/EDS production (served at site root)
- * Deriving the path from the nav metadata value is a trap: a page whose nav
- * meta is /content/nav makes both attempts resolve to the same path and 404
- * on DA/EDS preview + publish.
- * @returns {Element} a container holding the fetched nav sections
+ * Loads the nav fragment. An authored metadata path wins, followed by the
+ * standard root nav path and the local imported-content path.
+ * @returns {Element} the loaded nav fragment
  */
 async function loadNavFragment() {
-    let resp = await fetch(`${getMetadata('nav')}.plain.html`);
-  if (!resp.ok) resp = await fetch('/content/nav.plain.html' ||'/nav.plain.html');
-  const container = document.createElement('div');
-  if (resp.ok) container.innerHTML = await resp.text();
-  // Reproduce EDS decoration: wrap each top-level section's content in a
-  // .default-content-wrapper so the header CSS/JS selectors resolve the same
-  // way whether loaded here or via the standard fragment pipeline.
-  [...container.children].forEach((section) => {
-    if (!section.querySelector(':scope > .default-content-wrapper')) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'default-content-wrapper';
-      while (section.firstChild) wrapper.append(section.firstChild);
-      section.append(wrapper);
-    }
-  });
-  return container;
+  const configuredPath = getMetadata('nav').trim();
+  const configuredNavPath = configuredPath
+    ? new URL(configuredPath, window.location).pathname
+    : '';
+  const paths = [...new Set([configuredNavPath, '/nav', '/content/nav'].filter(Boolean))];
+  return await loadFirstFragment(paths) || document.createElement('main');
 }
 
 // media query match that indicates mobile/tablet width
@@ -74,8 +71,11 @@ function openOnKeydown(e) {
   }
 }
 
-function focusNavSection() {
-  document.activeElement.addEventListener('keydown', openOnKeydown);
+function focusNavSection(e) {
+  const navSections = e.currentTarget.closest('.nav-sections');
+  // eslint-disable-next-line no-use-before-define
+  toggleAllNavSections(navSections);
+  e.currentTarget.addEventListener('keydown', openOnKeydown);
 }
 
 /**
@@ -84,6 +84,7 @@ function focusNavSection() {
  * @param {Boolean} expanded Whether the element should be expanded or collapsed
  */
 function toggleAllNavSections(sections, expanded = false) {
+  if (!sections) return;
   sections.querySelectorAll('.nav-sections .default-content-wrapper > ul > li').forEach((section) => {
     section.setAttribute('aria-expanded', expanded);
   });
@@ -96,6 +97,7 @@ function toggleAllNavSections(sections, expanded = false) {
  * @param {*} forceExpanded Optional param to force nav expand behavior when not null
  */
 function toggleMenu(nav, navSections, forceExpanded = null) {
+  if (!navSections) return;
   const expanded = forceExpanded !== null ? !forceExpanded : nav.getAttribute('aria-expanded') === 'true';
   const button = nav.querySelector('.nav-hamburger button');
   document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
@@ -141,10 +143,28 @@ function getDirectTextContent(menuItem) {
     .join(' ');
 }
 
+function normalizeBrandLayout(navBrand) {
+  const logoParagraph = navBrand.querySelector('picture')?.closest('p');
+  const lineBreak = logoParagraph?.querySelector('br');
+  if (!lineBreak) return;
+
+  const audienceLabel = document.createElement('p');
+  let sibling = lineBreak.nextSibling;
+  while (sibling) {
+    const { nextSibling } = sibling;
+    audienceLabel.append(sibling);
+    sibling = nextSibling;
+  }
+  lineBreak.remove();
+
+  if (audienceLabel.textContent.trim()) logoParagraph.after(audienceLabel);
+}
+
 async function buildBreadcrumbsFromNavTree(nav, currentUrl) {
   const crumbs = [];
 
-  const homeUrl = document.querySelector('.nav-brand a[href]').href;
+  const homeUrl = document.querySelector('.nav-brand a[href]')?.href
+    || new URL('/', window.location).href;
 
   let menuItem = Array.from(nav.querySelectorAll('a')).find((a) => a.href === currentUrl);
   if (menuItem) {
@@ -200,7 +220,6 @@ async function buildBreadcrumbs() {
  * @param {Element} block The header block element
  */
 export default async function decorate(block) {
-  // load nav as fragment (metadata-independent dual fetch: /content first, root fallback)
   const fragment = await loadNavFragment();
 
   // decorate nav DOM
@@ -216,42 +235,77 @@ export default async function decorate(block) {
   });
 
   const navBrand = nav.querySelector('.nav-brand');
+  const navSections = nav.querySelector('.nav-sections');
+  const navTools = nav.querySelector('.nav-tools');
+  if (!navBrand || !navSections) {
+    // eslint-disable-next-line no-console
+    console.error('The nav document must contain brand and navigation sections.');
+    return;
+  }
+
+  normalizeBrandLayout(navBrand);
+
   const brandLink = navBrand.querySelector('.button');
   if (brandLink) {
     brandLink.className = '';
-    brandLink.closest('.button-container').className = '';
+    const buttonContainer = brandLink.closest('.button-container');
+    if (buttonContainer) buttonContainer.className = '';
   }
 
-  const navSections = nav.querySelector('.nav-sections');
-  if (navSections) {
-    navSections.querySelectorAll(':scope .default-content-wrapper > ul > li').forEach((navSection) => {
-      if (navSection.querySelector('ul')) navSection.classList.add('nav-drop');
-      navSection.addEventListener('click', () => {
+  navSections.querySelectorAll(':scope .default-content-wrapper > ul > li').forEach((navSection) => {
+    if (navSection.querySelector('ul')) {
+      navSection.classList.add('nav-drop');
+      navSection.addEventListener('mouseenter', () => {
         if (isDesktop.matches) {
-          const expanded = navSection.getAttribute('aria-expanded') === 'true';
           toggleAllNavSections(navSections);
-          navSection.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+          navSection.setAttribute('aria-expanded', 'true');
         }
       });
-    });
-  }
+      navSection.addEventListener('mouseleave', () => {
+        if (isDesktop.matches) {
+          toggleAllNavSections(navSections);
+        }
+      });
+    }
+  });
 
-  const navTools = nav.querySelector('.nav-tools');
   if (navTools) {
     const search = navTools.querySelector('a[href*="search"]');
-    if (search && search.textContent === '') {
+    if (search) {
       search.setAttribute('aria-label', 'Search');
+      search.textContent = '';
+      const icon = document.createElement('span');
+      icon.className = 'icon icon-search';
+      search.append(icon);
+      decorateIcons(search);
     }
   }
 
   // hamburger for mobile
   const hamburger = document.createElement('div');
   hamburger.classList.add('nav-hamburger');
-  hamburger.innerHTML = `<button type="button" aria-controls="nav" aria-label="Open navigation">
+  hamburger.innerHTML = `<button type="button" aria-controls="nav-menu" aria-label="Open navigation">
       <span class="nav-hamburger-icon"></span>
     </button>`;
   hamburger.addEventListener('click', () => toggleMenu(nav, navSections));
-  nav.prepend(hamburger);
+
+  const topLayer = document.createElement('div');
+  topLayer.className = 'nav-top';
+  const topLayerInner = document.createElement('div');
+  topLayerInner.className = 'nav-layer-inner';
+  topLayerInner.append(navBrand, hamburger);
+  topLayer.append(topLayerInner);
+
+  const secondLayer = document.createElement('div');
+  secondLayer.className = 'nav-second';
+  secondLayer.id = 'nav-menu';
+  const secondLayerInner = document.createElement('div');
+  secondLayerInner.className = 'nav-layer-inner';
+  secondLayerInner.append(navSections);
+  if (navTools) secondLayerInner.append(navTools);
+  secondLayer.append(secondLayerInner);
+
+  nav.append(topLayer, secondLayer);
   nav.setAttribute('aria-expanded', 'false');
   // prevent mobile nav behavior on window resize
   toggleMenu(nav, navSections, isDesktop.matches);
