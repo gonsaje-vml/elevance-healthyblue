@@ -34,16 +34,12 @@
       "id": "cards",
       "fields": [
         {
-          "component": "select",
+          "component": "multiselect",
           "name": "classes",
-          "value": "",
-          "label": "Card layout",
-          "valueType": "string",
+          "value": [],
+          "label": "Card options",
+          "valueType": "array",
           "options": [
-            {
-              "name": "Default (four columns)",
-              "value": ""
-            },
             {
               "name": "One column",
               "value": "one-col"
@@ -63,6 +59,10 @@
             {
               "name": "Five columns",
               "value": "five-col"
+            },
+            {
+              "name": "Featured resources styling",
+              "value": "featured-resources"
             }
           ]
         }
