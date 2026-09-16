@@ -33,6 +33,7 @@
   --heading-font-size-xs: 16px;
 
   /* layout */
+  --site-content-max-width: 1204px;
   --content-max-width: 1080px;
   --section-padding: 32px;
 }

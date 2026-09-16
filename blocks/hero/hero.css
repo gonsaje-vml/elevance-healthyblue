@@ -29,7 +29,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: right center;
+  object-position: center top;
 }
 
 /* white content card on the left, overlaid on the photo */
@@ -45,10 +45,12 @@
 .hero.block > div:last-child > div {
   box-sizing: border-box;
   max-width: 480px;
+  margin: 0 auto;
   padding: 32px 36px;
   border-radius: 6px;
   background-color: rgb(255 255 255 / 92%);
   box-shadow: 0 2px 12px rgb(0 0 0 / 8%);
+  text-align: center;
 }
 
 .hero.block h1 {
@@ -70,6 +72,20 @@
 @media (width >= 900px) {
   .hero.block {
     min-height: 420px;
-    padding: 56px 32px;
+    padding: 56px 0;
+  }
+
+  .hero.block img {
+    object-position: right top;
+  }
+
+  .hero.block > div:last-child {
+    max-width: var(--site-content-max-width);
+    padding: 0 var(--section-padding);
+  }
+
+  .hero.block > div:last-child > div {
+    margin-left: 0;
+    text-align: left;
   }
 }

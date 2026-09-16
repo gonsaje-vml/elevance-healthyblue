@@ -25,7 +25,7 @@ header nav {
   --header-dropdown-link-hover: #00546b;
   --header-top-height: 64px;
   --header-second-height: 44px;
-  --header-content-width: 1204px;
+  --header-content-width: var(--site-content-max-width);
 
   box-sizing: border-box;
   width: 100%;
