@@ -7,6 +7,31 @@
   grid-gap: 24px;
 }
 
+/* Explicit EDS block options for author-controlled column counts. */
+.cards.one-col {
+  --card-column-count: 1;
+}
+
+.cards.two-col {
+  --card-column-count: 2;
+}
+
+.cards.three-col {
+  --card-column-count: 3;
+}
+
+.cards.four-col {
+  --card-column-count: 4;
+}
+
+.cards.five-col {
+  --card-column-count: 5;
+}
+
+.cards:is(.one-col, .two-col, .three-col, .four-col, .five-col) > ul {
+  grid-template-columns: 1fr;
+}
+
 .cards > ul > li {
   border: 1px solid var(--brand-border);
   border-radius: 6px;
@@ -65,8 +90,18 @@
   text-decoration: underline;
 }
 
+@media (width >= 600px) {
+  .cards:is(.two-col, .three-col, .four-col, .five-col) > ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (width >= 900px) {
   .cards > ul {
     grid-template-columns: repeat(4, 1fr);
+  }
+
+  .cards:is(.one-col, .two-col, .three-col, .four-col, .five-col) > ul {
+    grid-template-columns: repeat(var(--card-column-count), minmax(0, 1fr));
   }
 }

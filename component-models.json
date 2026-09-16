@@ -79,6 +79,44 @@
     ]
   },
   {
+    "id": "cards",
+    "fields": [
+      {
+        "component": "select",
+        "name": "classes",
+        "value": "",
+        "label": "Card layout",
+        "valueType": "string",
+        "options": [
+          {
+            "name": "Default (four columns)",
+            "value": ""
+          },
+          {
+            "name": "One column",
+            "value": "one-col"
+          },
+          {
+            "name": "Two columns",
+            "value": "two-col"
+          },
+          {
+            "name": "Three columns",
+            "value": "three-col"
+          },
+          {
+            "name": "Four columns",
+            "value": "four-col"
+          },
+          {
+            "name": "Five columns",
+            "value": "five-col"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "card",
     "fields": [
       {
