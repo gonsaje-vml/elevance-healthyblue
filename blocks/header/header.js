@@ -27,6 +27,7 @@ async function loadNavFragment() {
 
 // media query match that indicates mobile/tablet width
 const isDesktop = window.matchMedia('(min-width: 900px)');
+const NAV_CLOSE_DELAY = 300;
 
 function closeOnEscape(e) {
   if (e.code === 'Escape') {
@@ -62,7 +63,7 @@ function closeOnFocusLost(e) {
 
 function openOnKeydown(e) {
   const focused = document.activeElement;
-  const isNavDrop = focused.className === 'nav-drop';
+  const isNavDrop = focused.classList.contains('nav-drop');
   if (isNavDrop && (e.code === 'Enter' || e.code === 'Space')) {
     const dropExpanded = focused.getAttribute('aria-expanded') === 'true';
     // eslint-disable-next-line no-use-before-define
@@ -252,18 +253,36 @@ export default async function decorate(block) {
     if (buttonContainer) buttonContainer.className = '';
   }
 
+  let closeNavTimer;
+  const cancelScheduledClose = () => window.clearTimeout(closeNavTimer);
+  const openNavSection = (navSection) => {
+    cancelScheduledClose();
+    toggleAllNavSections(navSections);
+    navSection.setAttribute('aria-expanded', 'true');
+  };
+  const scheduleNavClose = (navSection) => {
+    cancelScheduledClose();
+    closeNavTimer = window.setTimeout(() => {
+      if (!navSection.matches(':hover') && !navSection.contains(document.activeElement)) {
+        toggleAllNavSections(navSections);
+      }
+    }, NAV_CLOSE_DELAY);
+  };
+
   navSections.querySelectorAll(':scope .default-content-wrapper > ul > li').forEach((navSection) => {
-    if (navSection.querySelector('ul')) {
+    if (navSection.querySelector(':scope > ul')) {
       navSection.classList.add('nav-drop');
+      navSection.querySelectorAll('li').forEach((nestedItem) => {
+        if (nestedItem.querySelector(':scope > ul')) nestedItem.classList.add('nav-subdrop');
+      });
       navSection.addEventListener('mouseenter', () => {
         if (isDesktop.matches) {
-          toggleAllNavSections(navSections);
-          navSection.setAttribute('aria-expanded', 'true');
+          openNavSection(navSection);
         }
       });
       navSection.addEventListener('mouseleave', () => {
         if (isDesktop.matches) {
-          toggleAllNavSections(navSections);
+          scheduleNavClose(navSection);
         }
       });
     }

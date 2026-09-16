@@ -19,10 +19,11 @@ header nav {
   --header-second-text: #bce8f6;
   --header-second-link: #bce8f6;
   --header-second-link-hover: #fff;
-  --header-dropdown-background: #fff;
-  --header-dropdown-text: #273746;
-  --header-dropdown-link: #273746;
-  --header-dropdown-link-hover: #00546b;
+  --header-dropdown-background: #003f55;
+  --header-dropdown-text: #fff;
+  --header-dropdown-link: #fff;
+  --header-dropdown-link-hover: #bce8f6;
+  --header-dropdown-border: rgb(188 232 246 / 24%);
   --header-top-height: 64px;
   --header-second-height: 44px;
   --header-content-width: var(--site-content-max-width);
@@ -183,15 +184,19 @@ header nav .nav-sections a:focus-visible {
   color: var(--header-second-link-hover);
 }
 
-header nav .nav-sections .default-content-wrapper > ul > li > ul {
+header nav .nav-sections .default-content-wrapper > ul > li ul {
   margin-top: 8px;
   padding-left: 20px;
 }
 
-header nav .nav-sections .default-content-wrapper > ul > li > ul > li {
+header nav .nav-sections .default-content-wrapper > ul > li ul li {
   padding: 4px 0;
   color: var(--header-second-text);
   font-weight: 400;
+}
+
+header nav .nav-sections .default-content-wrapper > ul > li ul ul {
+  margin-top: 4px;
 }
 
 header nav .nav-tools {
@@ -420,28 +425,33 @@ header .breadcrumbs ol li[aria-current] {
   header nav .nav-sections .default-content-wrapper > ul > li[aria-expanded='true'] > ul {
     display: block;
     position: absolute;
-    top: calc(100% + 5px);
-    left: -16px;
+    top: 100%;
+    left: 0;
     z-index: 3;
-    width: max-content;
-    min-width: 220px;
-    max-width: 340px;
-    padding: 16px;
+    width: 400px;
+    max-width: min(400px, calc(100vw - 48px));
+    max-height: calc(100dvh - var(--header-top-height) - var(--header-second-height));
+    padding: 0;
     background-color: var(--header-dropdown-background);
     color: var(--header-dropdown-text);
     white-space: normal;
     box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
+    overflow-y: auto;
   }
 
   header nav .nav-sections .default-content-wrapper > ul > li > ul > li {
     width: auto;
-    padding: 8px 0;
+    padding: 9px 30px;
+    border-bottom: 1px solid var(--header-dropdown-border);
     color: var(--header-dropdown-text);
+    font-weight: 700;
     white-space: normal;
   }
 
   header nav .nav-sections .default-content-wrapper > ul > li > ul a:any-link {
     display: block;
+    margin: -9px -30px;
+    padding: 9px 30px;
     color: var(--header-dropdown-link);
     white-space: normal;
   }
@@ -449,6 +459,40 @@ header .breadcrumbs ol li[aria-current] {
   header nav .nav-sections .default-content-wrapper > ul > li > ul a:hover,
   header nav .nav-sections .default-content-wrapper > ul > li > ul a:focus-visible {
     color: var(--header-dropdown-link-hover);
+  }
+
+  /* Nested dropdown levels stay in the panel and indent progressively. */
+  header nav .nav-sections .default-content-wrapper > ul > li[aria-expanded='true'] > ul ul {
+    display: block;
+    position: static;
+    width: auto;
+    max-width: none;
+    margin: 4px -30px 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  header nav .nav-sections .default-content-wrapper > ul > li[aria-expanded='true'] > ul ul li {
+    padding: 4px 30px 4px 50px;
+    border: 0;
+    color: var(--header-dropdown-text);
+    font-weight: 400;
+  }
+
+  header nav .nav-sections .default-content-wrapper > ul > li[aria-expanded='true'] > ul ul a:any-link {
+    margin: -4px -30px -4px -50px;
+    padding: 4px 30px 4px 50px;
+    font-weight: 400;
+  }
+
+  header nav .nav-sections .default-content-wrapper > ul > li[aria-expanded='true'] > ul ul ul li {
+    padding-left: 70px;
+  }
+
+  header nav .nav-sections .default-content-wrapper > ul > li[aria-expanded='true'] > ul ul ul a:any-link {
+    margin-left: -70px;
+    padding-left: 70px;
   }
 
   header nav .nav-tools {
