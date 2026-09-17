@@ -230,6 +230,102 @@ header nav .nav-tools p + p::before {
   opacity: 0.8;
 }
 
+header nav .nav-search-form {
+  display: flex;
+  position: relative;
+  align-items: center;
+  margin: 0;
+}
+
+header nav .nav-tools p + .nav-search-form::before {
+  content: '';
+  display: block;
+  width: 1px;
+  height: 16px;
+  margin-right: 16px;
+  background-color: currentcolor;
+  opacity: 0.8;
+}
+
+header nav .nav-search-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--header-second-link);
+}
+
+header nav .nav-search-toggle:hover,
+header nav .nav-search-toggle:focus-visible {
+  background: transparent;
+  color: var(--header-second-link-hover);
+}
+
+header nav .nav-search-panel {
+  display: flex;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 6;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 48px));
+  padding: 12px;
+  background: var(--background-color);
+  color: var(--text-color);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 24%);
+  gap: 8px;
+}
+
+header nav .nav-search-panel[hidden] {
+  display: none;
+}
+
+header nav .nav-search-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+header nav .nav-search-input {
+  box-sizing: border-box;
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  border: 1px solid var(--dark-color);
+  border-radius: 0;
+  padding: 8px 10px;
+  background: var(--background-color);
+  color: var(--text-color);
+  font: inherit;
+}
+
+header nav .nav-search-submit {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 8px 12px;
+  background: var(--link-color);
+  color: var(--background-color);
+  font: inherit;
+  font-weight: 700;
+}
+
+header nav .nav-search-submit:hover,
+header nav .nav-search-submit:focus-visible {
+  background: var(--link-hover-color);
+}
+
 header nav .nav-tools .button {
   margin: 0;
   border: 0;
@@ -254,6 +350,22 @@ header nav .nav-tools .icon-search img {
   display: block;
   width: 18px;
   height: 18px;
+}
+
+@media (width < 900px) {
+  header nav .nav-search-form {
+    width: 100%;
+  }
+
+  header nav .nav-tools p + .nav-search-form::before {
+    display: none;
+  }
+
+  header nav .nav-search-panel {
+    position: static;
+    width: 100%;
+    margin-left: 8px;
+  }
 }
 
 /* Mobile menu control lives in the top layer. */

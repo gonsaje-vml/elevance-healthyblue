@@ -28,6 +28,109 @@ async function loadNavFragment() {
 // media query match that indicates mobile/tablet width
 const isDesktop = window.matchMedia('(min-width: 900px)');
 const NAV_CLOSE_DELAY = 300;
+const IS_SEARCH_DEMO_HOST = window.location.hostname === 'localhost'
+  || window.location.hostname.startsWith('sandbox--');
+const DEFAULT_SEARCH_PATH = IS_SEARCH_DEMO_HOST
+  ? '/tools/search-demo.html'
+  : '/north-carolina-provider/search';
+
+function decorateNavSearch(navTools) {
+  const authoredSearch = navTools.querySelector('a[href*="search"]');
+  const authoredIcon = authoredSearch?.querySelector('.icon-search')
+    || navTools.querySelector('.icon-search');
+  if (!authoredSearch && !authoredIcon) return;
+
+  const action = authoredSearch
+    ? new URL(authoredSearch.href, window.location).pathname
+    : DEFAULT_SEARCH_PATH;
+  const source = authoredSearch || authoredIcon;
+  const sourceContainer = source.closest('p') || source;
+
+  const form = document.createElement('form');
+  form.className = 'nav-search-form';
+  form.action = action;
+  form.method = 'get';
+  form.setAttribute('role', 'search');
+
+  const toggle = document.createElement('button');
+  toggle.className = 'nav-search-toggle';
+  toggle.type = 'button';
+  toggle.setAttribute('aria-label', 'Open search');
+  toggle.setAttribute('aria-expanded', 'false');
+  toggle.setAttribute('aria-controls', 'nav-search-panel');
+  const icon = document.createElement('span');
+  icon.className = 'icon icon-search';
+  toggle.append(icon);
+
+  const panel = document.createElement('div');
+  panel.id = 'nav-search-panel';
+  panel.className = 'nav-search-panel';
+  panel.hidden = true;
+
+  const label = document.createElement('label');
+  label.className = 'nav-search-label';
+  label.htmlFor = 'nav-search-input';
+  label.textContent = 'Search provider documents';
+
+  const input = document.createElement('input');
+  input.id = 'nav-search-input';
+  input.className = 'nav-search-input';
+  input.type = 'search';
+  input.name = 'q';
+  input.placeholder = 'What are you searching for?';
+  input.minLength = 3;
+  input.required = true;
+  input.value = new URLSearchParams(window.location.search).get('q') || '';
+
+  const submit = document.createElement('button');
+  submit.className = 'nav-search-submit';
+  submit.type = 'submit';
+  submit.textContent = 'Search';
+  panel.append(label, input, submit);
+  form.append(toggle, panel);
+
+  const closeSearch = () => {
+    panel.hidden = true;
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Open search');
+  };
+
+  const openSearch = () => {
+    panel.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.setAttribute('aria-label', 'Close search');
+    input.focus();
+  };
+
+  toggle.addEventListener('click', () => {
+    if (panel.hidden) openSearch();
+    else closeSearch();
+  });
+
+  form.addEventListener('keydown', (e) => {
+    if (e.code === 'Escape') {
+      closeSearch();
+      toggle.focus();
+    }
+  });
+
+  form.addEventListener('focusout', (e) => {
+    if (!form.contains(e.relatedTarget)) closeSearch();
+  });
+
+  input.addEventListener('input', () => input.setCustomValidity(''));
+  form.addEventListener('submit', (e) => {
+    const query = input.value.trim();
+    if (query.length < 3) {
+      e.preventDefault();
+      input.setCustomValidity('Enter at least three characters.');
+      input.reportValidity();
+    }
+  });
+
+  sourceContainer.replaceWith(form);
+  decorateIcons(form);
+}
 
 function closeOnEscape(e) {
   if (e.code === 'Escape') {
@@ -289,15 +392,7 @@ export default async function decorate(block) {
   });
 
   if (navTools) {
-    const search = navTools.querySelector('a[href*="search"]');
-    if (search) {
-      search.setAttribute('aria-label', 'Search');
-      search.textContent = '';
-      const icon = document.createElement('span');
-      icon.className = 'icon icon-search';
-      search.append(icon);
-      decorateIcons(search);
-    }
+    decorateNavSearch(navTools);
   }
 
   // hamburger for mobile

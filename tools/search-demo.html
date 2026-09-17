@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Provider search proof of concept</title>
+    <link rel="stylesheet" href="/styles/styles.css">
+    <link rel="stylesheet" href="/blocks/search/search.css">
+    <style>
+      .search-demo-note {
+        max-width: 70ch;
+      }
+    </style>
+  </head>
+  <body class="appear">
+    <main>
+      <div class="section">
+        <div>
+          <h1>Search Healthy Blue NC providers</h1>
+          <p class="search-demo-note">
+            This temporary proof of concept searches two published provider pages and two PDFs.
+            Try <strong>communications</strong>, <strong>medical management</strong>,
+            <strong>claims</strong>, or <strong>enrollment</strong>.
+          </p>
+          <div class="search minimal">
+            <div>
+              <div>
+                <a href="/documents-index.json">Temporary combined index</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script type="module">
+      import decorate from '/blocks/search/search.js';
+
+      await decorate(document.querySelector('.search'));
+    </script>
+  </body>
+</html>

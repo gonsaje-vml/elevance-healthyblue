@@ -1,0 +1,43 @@
+{
+  "total": 4,
+  "offset": 0,
+  "limit": 4,
+  "data": [
+    {
+      "path": "/north-carolina-provider/communications",
+      "title": "Provider Communications",
+      "header": "Provider communications",
+      "description": "Healthy Blue provider news, policy updates, clinical guidelines, regulatory changes, email notifications, and archived communications.",
+      "content": "Stay current on Healthy Blue policies and processes, updates to clinical guidelines, state and federal regulatory changes, Provider News, email notifications, announcements, archives, and issues affecting practices and patients.",
+      "topic": "communications",
+      "type": "page"
+    },
+    {
+      "path": "/north-carolina-provider/medical-management",
+      "title": "Medical Management Model",
+      "header": "Medical management model",
+      "description": "Healthy Blue utilization management and member-centric care management models.",
+      "content": "The Utilization Management Program uses an integrated medical management model based on members' physical, behavioral, and social needs. Care management includes early identification, continuous assessment, provider collaboration, individualized care plans, and medically necessary care in the least-restrictive setting.",
+      "topic": "patient-care",
+      "type": "page"
+    },
+    {
+      "path": "/docs/nc-caid-knownissueslist.pdf",
+      "title": "Known Issues Bulletin",
+      "header": "Known Issues Bulletin",
+      "description": "Known issues affecting Healthy Blue and Healthy Blue Care Together providers.",
+      "content": "September 11 2026 provider known issues claims denials status resolution claims reprocessing appeals authorizations behavioral health telepsychiatry DME durable medical equipment procedure codes modifiers underpayments configuration estimated fix date open closed Provider Services",
+      "topic": "claims-billing",
+      "type": "pdf"
+    },
+    {
+      "path": "/docs/nc-caid-providerenrollmentdataguidance.pdf",
+      "title": "Provider Enrollment Data Guidance",
+      "header": "Provider Enrollment Data Guidance",
+      "description": "Guidance for maintaining provider enrollment and credentialing data with NCTracks and Healthy Blue.",
+      "content": "April 2024 provider enrollment data credentialing NCTracks enrollment re-enrollment re-verification manage change request MCR provider record maintenance office administrator authorized user shared files approval Healthy Blue system NCTracks Contact Center",
+      "topic": "provider-resources",
+      "type": "pdf"
+    }
+  ]
+}
