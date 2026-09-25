@@ -13,6 +13,18 @@ The Search block combines `/query-index.json` with the matching asset index. It
 selects the preview index on `.aem.page` and local development, and the published
 index on live and production domains.
 
+The same run also builds autocomplete-ready phrase catalogs from page titles,
+page H1 values, and document titles:
+
+- `/search-key-phrases-preview.json` uses the preview page and asset indexes.
+- `/search-key-phrases.json` uses the live page and asset indexes.
+
+The phrase files normalize and deduplicate values, exclude configured utility
+pages and `noindex` records, and retain source counts and content types. They do
+not mine arbitrary phrases from document body text, which would make suggestions
+large and noisy. A small curated synonym list can be layered in later if search
+analytics identify important terms that are absent from authored titles.
+
 ## Configuration
 
 Edit `roots` and the safety limits in `asset-index.config.json`. Roots may overlap;
@@ -20,11 +32,11 @@ the crawler visits each directory once and deduplicates assets by path. Keep
 `minimumFiles` above zero and `allowPartial` set to `false` so a bad root or failed
 download cannot replace a complete index.
 
-The `outputs` map gives each delivery environment its own file. A source-only asset
-is skipped from both. Removing an asset from preview removes it from the next
-preview index; unpublishing it removes it from the next published index. Each PDF
-is downloaded from its matching delivery environment, so newer preview-only text
-cannot appear in the published index.
+The `outputs` and `keyPhrases.outputs` maps give each delivery environment its own
+files. A source-only asset is skipped from both. Removing an asset from preview
+removes it from the next preview index; unpublishing it removes it from the next
+published index. Each PDF is downloaded from its matching delivery environment,
+so newer preview-only text cannot appear in the published index.
 
 The workflow runs when its implementation or configuration is pushed to `main`,
 every 15 minutes on the quarter hour, or when manually dispatched. Every run
@@ -65,4 +77,5 @@ enforces minimum and maximum record counts, and refuses partial output by defaul
 Unchanged records are reused by path and delivery modification time, avoiding
 repeated PDF downloads. Delivery status is checked before reuse so unpreviewed or
 unpublished assets are removed from their respective indexes. If a complete index
-is unchanged, the generator also skips rewriting that output.
+is unchanged, the generator also skips rewriting that output. Phrase catalogs are
+also written atomically and left untouched when their content is unchanged.

@@ -6,6 +6,21 @@
     "preview": "asset-index-preview.json",
     "live": "asset-index.json"
   },
+  "keyPhrases": {
+    "outputs": {
+      "preview": "search-key-phrases-preview.json",
+      "live": "search-key-phrases.json"
+    },
+    "pageIndexPath": "/query-index.json",
+    "excludePaths": [
+      "/footer",
+      "/nav",
+      "/north-carolina-provider/search"
+    ],
+    "minimumLength": 3,
+    "maximumLength": 120,
+    "maximumPhrases": 5000
+  },
   "roots": [
     "/docs"
   ],

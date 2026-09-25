@@ -1,0 +1,61 @@
+{
+  "_meta": {
+    "version": 1,
+    "environment": "live",
+    "sources": [
+      "/query-index.json",
+      "/asset-index.json"
+    ]
+  },
+  "total": 6,
+  "data": [
+    {
+      "phrase": "Communications",
+      "normalized": "communications",
+      "sourceCount": 1,
+      "types": [
+        "page"
+      ]
+    },
+    {
+      "phrase": "Medical Management Model",
+      "normalized": "medical management model",
+      "sourceCount": 1,
+      "types": [
+        "page"
+      ]
+    },
+    {
+      "phrase": "Nc Caid Knownissueslist",
+      "normalized": "nc caid knownissueslist",
+      "sourceCount": 1,
+      "types": [
+        "pdf"
+      ]
+    },
+    {
+      "phrase": "Nc Caid Providerenrollmentdataguidance",
+      "normalized": "nc caid providerenrollmentdataguidance",
+      "sourceCount": 1,
+      "types": [
+        "pdf"
+      ]
+    },
+    {
+      "phrase": "Nc Caid Readysetrenewbenefits",
+      "normalized": "nc caid readysetrenewbenefits",
+      "sourceCount": 1,
+      "types": [
+        "pdf"
+      ]
+    },
+    {
+      "phrase": "Welcome!",
+      "normalized": "welcome",
+      "sourceCount": 3,
+      "types": [
+        "page"
+      ]
+    }
+  ]
+}

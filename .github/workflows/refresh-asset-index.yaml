@@ -12,6 +12,8 @@ on:
       - blocks/search/search.js
       - tools/build-da-source-index.mjs
       - tools/build-da-source-index.test.mjs
+      - tools/build-search-key-phrases.mjs
+      - tools/build-search-key-phrases.test.mjs
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
@@ -56,15 +58,22 @@ jobs:
         run: |
           node -e '
             const fs = require("node:fs");
-            const { outputs } = JSON.parse(fs.readFileSync("asset-index.config.json", "utf8"));
-            const paths = Object.values(outputs || {});
-            const invalid = paths.length !== 2 || paths.some((output) => (
+            const { outputs, keyPhrases } = JSON.parse(
+              fs.readFileSync("asset-index.config.json", "utf8"),
+            );
+            const paths = [
+              ...Object.values(outputs || {}),
+              ...Object.values(keyPhrases?.outputs || {}),
+            ];
+            const invalid = paths.length !== 4
+              || new Set(paths).size !== paths.length
+              || paths.some((output) => (
               typeof output !== "string"
               || output.startsWith("/")
               || output.split("/").includes("..")
               || !/^[A-Za-z0-9._/-]+$/.test(output)
             ));
-            if (invalid) throw new Error("Configure two safe repository-relative output paths.");
+            if (invalid) throw new Error("Configure four unique, safe output paths.");
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `paths=${paths.join(" ")}\n`);
           '
 
@@ -134,32 +143,32 @@ jobs:
           process.stdout.write(`DA access verified; found ${items.length} direct entries under /docs.\n`);
           NODE
 
-      - name: Build preview and live asset indexes
+      - name: Build preview and live search data
         env:
           ASSET_INDEX_ROOTS: ${{ inputs.roots }}
         run: npm run search:index:da
 
-      - name: Detect index changes
+      - name: Detect search data changes
         id: changes
         env:
-          ASSET_INDEX_OUTPUTS: ${{ steps.config.outputs.paths }}
+          SEARCH_DATA_OUTPUTS: ${{ steps.config.outputs.paths }}
         run: |
-          read -ra output_paths <<< "$ASSET_INDEX_OUTPUTS"
+          read -ra output_paths <<< "$SEARCH_DATA_OUTPUTS"
           if [ -n "$(git status --porcelain -- "${output_paths[@]}")" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "$ASSET_INDEX_OUTPUTS are already current."
+            echo "$SEARCH_DATA_OUTPUTS are already current."
           fi
 
-      - name: Commit updated index
+      - name: Commit updated search data
         if: steps.changes.outputs.changed == 'true'
         env:
-          ASSET_INDEX_OUTPUTS: ${{ steps.config.outputs.paths }}
+          SEARCH_DATA_OUTPUTS: ${{ steps.config.outputs.paths }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          read -ra output_paths <<< "$ASSET_INDEX_OUTPUTS"
+          read -ra output_paths <<< "$SEARCH_DATA_OUTPUTS"
           git add -- "${output_paths[@]}"
-          git commit -m "chore(search): refresh asset indexes"
+          git commit -m "chore(search): refresh search data"
           git push origin "HEAD:main"
