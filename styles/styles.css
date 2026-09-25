@@ -19,6 +19,12 @@
   --header-height: var(--nav-height);
 }
 
+@media (width >= 900px) {
+  :root {
+    --nav-height: 92px;
+  }
+}
+
 body {
   display: none;
   margin: 0;

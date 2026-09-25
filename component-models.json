@@ -79,6 +79,44 @@
     ]
   },
   {
+    "id": "cards",
+    "fields": [
+      {
+        "component": "multiselect",
+        "name": "classes",
+        "value": [],
+        "label": "Card options",
+        "valueType": "array",
+        "options": [
+          {
+            "name": "One column",
+            "value": "one-col"
+          },
+          {
+            "name": "Two columns",
+            "value": "two-col"
+          },
+          {
+            "name": "Three columns",
+            "value": "three-col"
+          },
+          {
+            "name": "Four columns",
+            "value": "four-col"
+          },
+          {
+            "name": "Five columns",
+            "value": "five-col"
+          },
+          {
+            "name": "Featured resources styling",
+            "value": "featured-resources"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "card",
     "fields": [
       {
@@ -131,6 +169,23 @@
   {
     "id": "columns",
     "fields": [
+      {
+        "component": "select",
+        "name": "classes",
+        "value": "",
+        "label": "Column layout",
+        "valueType": "string",
+        "options": [
+          {
+            "name": "Default",
+            "value": ""
+          },
+          {
+            "name": "Resource links",
+            "value": "resource-links"
+          }
+        ]
+      },
       {
         "component": "number",
         "valueType": "number",
@@ -217,8 +272,8 @@
         "component": "text",
         "valueType": "string",
         "name": "searchUrl",
-        "label": "Search URL",
-        "required": true
+        "label": "Additional Search URL",
+        "required": false
       }
     ]
   },

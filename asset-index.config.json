@@ -1,0 +1,26 @@
+{
+  "org": "gonsaje-vml",
+  "site": "elevance-healthyblue",
+  "roots": [
+    "/docs"
+  ],
+  "output": "asset-index.json",
+  "extensions": [
+    "pdf",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+    "csv",
+    "rtf",
+    "txt"
+  ],
+  "minimumFiles": 1,
+  "maxFiles": 1000,
+  "pdfMaxPages": 0,
+  "contentMaxCharacters": 250000,
+  "concurrency": 2,
+  "allowPartial": false
+}

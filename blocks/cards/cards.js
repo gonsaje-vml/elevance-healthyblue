@@ -1,6 +1,27 @@
 import { createOptimizedPicture } from '../../scripts/aem.js';
 
+const CARD_OPTIONS = [
+  'one-col',
+  'two-col',
+  'three-col',
+  'four-col',
+  'five-col',
+  'featured-resources',
+];
+
+function normalizeCardOptions(block) {
+  const authoredClasses = [...block.classList];
+  CARD_OPTIONS.forEach((option) => {
+    if (authoredClasses.some((className) => className.includes(option))) {
+      block.classList.add(option);
+    }
+  });
+}
+
 export default function decorate(block) {
+  // Preserve each option when older DA models combine selections into one class.
+  normalizeCardOptions(block);
+
   /* change to ul, li */
   const ul = document.createElement('ul');
   [...block.children].forEach((row) => {

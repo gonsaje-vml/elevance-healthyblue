@@ -44,6 +44,23 @@
       "id": "columns",
       "fields": [
         {
+          "component": "select",
+          "name": "classes",
+          "value": "",
+          "label": "Column layout",
+          "valueType": "string",
+          "options": [
+            {
+              "name": "Default",
+              "value": ""
+            },
+            {
+              "name": "Resource links",
+              "value": "resource-links"
+            }
+          ]
+        },
+        {
           "component": "number",
           "valueType": "number",
           "name": "columns",

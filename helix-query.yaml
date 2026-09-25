@@ -1,0 +1,39 @@
+version: 1
+
+indices:
+  provider-pages:
+    include:
+      - /
+      - /north-carolina-provider/**
+    exclude:
+      - /north-carolina-provider/search
+      - /north-carolina-provider/fragments/**
+    target: /query-index.json
+    properties:
+      path:
+        select: none
+        value: path
+      title:
+        selectFirst: head > meta[property="og:title"]
+        value: attribute(el, "content")
+      description:
+        selectFirst: head > meta[name="description"]
+        value: attribute(el, "content")
+      header:
+        selectFirst: main h1
+        value: textContent(el)
+      content:
+        selectFirst: main
+        value: textContent(el)
+      topic:
+        selectFirst: head > meta[name="search-topic"]
+        value: attribute(el, "content")
+      type:
+        selectFirst: head > meta[name="search-type"]
+        value: attribute(el, "content")
+      robots:
+        selectFirst: head > meta[name="robots"]
+        value: attribute(el, "content")
+      lastModified:
+        select: none
+        value: parseTimestamp(headers["last-modified"], "ddd, DD MMM YYYY hh:mm:ss GMT")
