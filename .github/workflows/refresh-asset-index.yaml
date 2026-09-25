@@ -14,7 +14,7 @@ on:
       - tools/build-da-source-index.mjs
       - tools/build-da-source-index.test.mjs
   schedule:
-    - cron: '23 5 * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       roots:
