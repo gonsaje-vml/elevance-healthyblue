@@ -3,6 +3,7 @@ coverage/*
 logs/*
 node_modules/*
 /query-index.local.json
+/da-source-index.local.json
 
 helix-importer-ui
 .DS_Store

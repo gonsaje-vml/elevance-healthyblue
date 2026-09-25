@@ -272,8 +272,8 @@
         "component": "text",
         "valueType": "string",
         "name": "searchUrl",
-        "label": "Search URL",
-        "required": true
+        "label": "Additional Search URL",
+        "required": false
       }
     ]
   },

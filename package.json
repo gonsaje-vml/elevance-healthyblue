@@ -7,6 +7,8 @@
     "lint:js": "eslint .",
     "lint:css": "stylelint 'blocks/**/*.css' 'styles/*.css'",
     "lint": "npm run lint:js && npm run lint:css",
+    "search:index:da": "node tools/build-da-source-index.mjs --config asset-index.config.json",
+    "test:search-index": "node --test tools/build-da-source-index.test.mjs",
     "search:index:local": "node tools/build-local-search-index.mjs",
     "build:json": "npm-run-all -p build:json:models build:json:definitions build:json:filters",
     "build:json:models": "merge-json-cli -i \"ue/models/component-models.json\" -o \"component-models.json\"",
@@ -29,10 +31,11 @@
     "eslint": "8.57.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.29.1",
-    "stylelint": "16.7.0",
-    "stylelint-config-standard": "36.0.1",
     "husky": "^9.1.7",
     "merge-json-cli": "^1.0.4",
-    "npm-run-all": "^4.1.5"
+    "npm-run-all": "^4.1.5",
+    "pdfjs-dist": "^5.4.624",
+    "stylelint": "16.7.0",
+    "stylelint-config-standard": "36.0.1"
   }
 }

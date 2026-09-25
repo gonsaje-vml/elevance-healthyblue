@@ -1,0 +1,96 @@
+name: Refresh sandbox search asset index
+
+on:
+  # Pushes make the workflow usable while it lives only on sandbox-search.
+  # Scheduled runs begin once this workflow also exists on the default branch.
+  push:
+    branches:
+      - sandbox-search
+    paths:
+      - .github/workflows/refresh-asset-index.yaml
+      - asset-index.config.json
+      - package.json
+      - package-lock.json
+      - tools/build-da-source-index.mjs
+      - tools/build-da-source-index.test.mjs
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+    inputs:
+      roots:
+        description: 'Optional comma-separated directory override, such as /docs,/media'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-sandbox-search-asset-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out sandbox-search
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: sandbox-search
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test asset index generator
+        run: npm run test:search-index
+
+      - name: Read configured output path
+        id: config
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const { output } = JSON.parse(fs.readFileSync("asset-index.config.json", "utf8"));
+            const invalid = typeof output !== "string"
+              || output.startsWith("/")
+              || output.split("/").includes("..")
+              || !/^[A-Za-z0-9._/-]+$/.test(output);
+            if (invalid) throw new Error("Configured output must be a safe repository-relative path.");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `path=${output}\n`);
+          '
+
+      - name: Build asset-index.json
+        env:
+          ASSET_INDEX_ROOTS: ${{ inputs.roots }}
+          DA_IMS_TOKEN: ${{ secrets.DA_IMS_TOKEN }}
+        run: npm run search:index:da
+
+      - name: Detect index changes
+        id: changes
+        env:
+          ASSET_INDEX_OUTPUT: ${{ steps.config.outputs.path }}
+        run: |
+          if [ -n "$(git status --porcelain -- "$ASSET_INDEX_OUTPUT")" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "$ASSET_INDEX_OUTPUT is already current."
+          fi
+
+      - name: Commit updated index
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          ASSET_INDEX_OUTPUT: ${{ steps.config.outputs.path }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$ASSET_INDEX_OUTPUT"
+          git commit -m "chore(search): refresh asset index"
+          git push origin "HEAD:sandbox-search"

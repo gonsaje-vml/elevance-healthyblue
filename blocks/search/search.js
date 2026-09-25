@@ -8,7 +8,7 @@ const searchParams = new URLSearchParams(window.location.search);
 const dataCache = new Map();
 const MIN_QUERY_LENGTH = 3;
 const SEARCH_DELAY = 200;
-const DEFAULT_SOURCES = ['/query-index.json', '/documents-index.json'];
+const DEFAULT_SOURCES = ['/query-index.json', '/asset-index.json'];
 let searchInstance = 0;
 
 function normalizeText(value = '') {
@@ -371,7 +371,9 @@ function searchBox(block, config) {
 export default async function decorate(block) {
   const placeholders = await fetchPlaceholders();
   const authoredSources = [...block.querySelectorAll('a[href]')].map(({ href }) => href);
-  const configuredSources = authoredSources.length ? authoredSources : DEFAULT_SOURCES;
+  // Keep authored sources for backward compatibility, then layer the project defaults
+  // on top so the native page and generated asset indexes remain authoritative.
+  const configuredSources = [...authoredSources, ...DEFAULT_SOURCES];
   const sources = [...new Set(configuredSources
     .map((source) => new URL(source, window.location).href))];
   block.innerHTML = '';
