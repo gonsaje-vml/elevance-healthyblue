@@ -22,6 +22,7 @@ const DEFAULT_CONFIG_PATH = 'asset-index.config.json';
 const DEFAULT_API_ORIGIN = 'https://admin.da.live';
 const INDEX_FORMAT_VERSION = 1;
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+const DELIVERY_ENVIRONMENTS = new Set(['preview', 'live']);
 const IMAGE_EXTENSIONS = new Set(['avif', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp']);
 const VIDEO_EXTENSIONS = new Set(['m4v', 'mov', 'mp4', 'webm']);
 const AUDIO_EXTENSIONS = new Set(['m4a', 'mp3', 'ogg', 'wav']);
@@ -55,6 +56,7 @@ Environment:
   DA_IMS_TOKEN            Required IMS bearer token for the DA APIs
   DA_ORG                  Optional organization override
   DA_SITE                 Optional site override
+  AEM_BRANCH              Optional delivery branch override (default: main)
   ASSET_INDEX_ROOTS       Optional comma-separated directory override
 `);
 }
@@ -100,6 +102,27 @@ function normalizeExtensions(values) {
   return new Set(values.map((value) => String(value).toLowerCase().replace(/^\./, '')));
 }
 
+function normalizeDeliveryEnvironments(values) {
+  if (values === undefined) return [];
+  if (!Array.isArray(values) || !values.length) {
+    throw new Error('deliveryEnvironments must be a non-empty array when configured.');
+  }
+  const environments = [...new Set(values.map((value) => String(value).toLowerCase()))];
+  const unsupported = environments.filter((value) => !DELIVERY_ENVIRONMENTS.has(value));
+  if (unsupported.length) {
+    throw new Error(`Unsupported delivery environment: ${unsupported.join(', ')}.`);
+  }
+  return environments;
+}
+
+function deliveryOrigin(config, environment) {
+  const environmentVariable = environment === 'preview'
+    ? process.env.AEM_PREVIEW_ORIGIN
+    : process.env.AEM_LIVE_ORIGIN;
+  return environmentVariable
+    || `https://${config.branch}--${config.site}--${config.org}.aem.${environment === 'preview' ? 'page' : 'live'}`;
+}
+
 async function loadConfiguration(args) {
   const configPath = resolve(process.cwd(), option(args, 'config') || DEFAULT_CONFIG_PATH);
   const config = JSON.parse(await readFile(configPath, 'utf8'));
@@ -108,6 +131,7 @@ async function loadConfiguration(args) {
   return {
     org: process.env.DA_ORG || config.org,
     site: process.env.DA_SITE || config.site,
+    branch: process.env.AEM_BRANCH || config.branch || 'main',
     roots: parseRoots(rootsOverride || config.roots),
     outputPath: safeOutputPath(option(args, 'output') || config.output),
     extensions: normalizeExtensions(config.extensions),
@@ -125,15 +149,85 @@ async function loadConfiguration(args) {
     concurrency: positiveInteger(config.concurrency || 2, 'concurrency'),
     skipPdfText: hasFlag(args, 'skip-pdf-text'),
     allowPartial: hasFlag(args, 'allow-partial') || config.allowPartial === true,
+    deliveryEnvironments: normalizeDeliveryEnvironments(config.deliveryEnvironments),
     apiOrigin: process.env.DA_API_ORIGIN || DEFAULT_API_ORIGIN,
   };
 }
 
 function validateConfiguration(config) {
   if (!config.org || !config.site) throw new Error('Both org and site must be configured.');
+  [config.org, config.site, config.branch].forEach((value) => {
+    if (!/^[a-z0-9][a-z0-9-]*$/i.test(value)) {
+      throw new Error(`Invalid AEM URL identifier: ${value}`);
+    }
+  });
   if (!process.env.DA_IMS_TOKEN) {
     throw new Error('DA_IMS_TOKEN is required. Store it as a GitHub Actions secret for scheduled runs.');
   }
+}
+
+function deliveryUrl(config, environment, path) {
+  const normalizedPath = path.split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+  return `${deliveryOrigin(config, environment).replace(/\/$/, '')}${normalizedPath}`;
+}
+
+async function deliveryStatus(config, environment, path) {
+  const url = deliveryUrl(config, environment, path);
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    let response;
+    try {
+      // HEAD verifies delivery without downloading the asset again.
+      // eslint-disable-next-line no-await-in-loop
+      response = await fetch(url, {
+        method: 'HEAD',
+        headers: { 'User-Agent': 'elevance-da-asset-index/1.0' },
+        signal: AbortSignal.timeout(30000),
+      });
+    } catch (error) {
+      if (attempt === 3) throw error;
+      // eslint-disable-next-line no-await-in-loop
+      await wait(2 ** attempt * 500);
+    }
+
+    if (response) {
+      if (response.ok) return true;
+      if ([404, 410].includes(response.status)) return false;
+      if ([401, 403].includes(response.status)) {
+        throw new Error(
+          `${environment} status for ${path} returned HTTP ${response.status}. `
+          + 'The delivery environment may require authentication.',
+        );
+      }
+      if (!RETRYABLE_STATUSES.has(response.status) || attempt === 3) {
+        throw new Error(`${environment} status for ${path} failed with HTTP ${response.status}.`);
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await wait(2 ** attempt * 500);
+    }
+  }
+
+  throw new Error(`${environment} status for ${path} failed after all retries.`);
+}
+
+async function isDelivered(config, path) {
+  if (!config.deliveryEnvironments.length) return true;
+  let firstError;
+
+  for (const environment of config.deliveryEnvironments) {
+    try {
+      // Stop as soon as one configured environment contains the asset.
+      // eslint-disable-next-line no-await-in-loop
+      if (await deliveryStatus(config, environment, path)) return true;
+    } catch (error) {
+      firstError ||= error;
+    }
+  }
+
+  if (firstError) throw firstError;
+  return false;
 }
 
 function wait(milliseconds) {
@@ -255,6 +349,8 @@ function configurationFingerprint(config) {
     pdfMaxPages: config.pdfMaxPages,
     contentMaxCharacters: config.contentMaxCharacters,
     skipPdfText: config.skipPdfText,
+    branch: config.branch,
+    deliveryEnvironments: [...config.deliveryEnvironments].sort(),
   };
   return createHash('sha256')
     .update(JSON.stringify(relevantConfiguration))
@@ -427,14 +523,29 @@ async function main() {
   const candidates = await mapConcurrent(assets, config.concurrency, async (asset) => {
     const assetLastModified = lastModified(asset.lastModified);
     const reusable = existingIndex.records.get(asset.path);
-    if (assetLastModified
-      && reusable?.lastModified === assetLastModified
-      && reusable?.type === asset.ext) {
-      process.stdout.write(`Reused ${asset.ext.toUpperCase()} ${asset.path}\n`);
-      return reusable;
+    let delivered;
+
+    try {
+      delivered = await isDelivered(config, asset.path);
+    } catch (error) {
+      failures.push({ path: asset.path, message: error.message });
+      process.stderr.write(`Failed ${asset.path}: ${error.message}\n`);
+      return null;
+    }
+
+    if (!delivered) {
+      process.stdout.write(`Skipped unpreviewed and unpublished ${asset.path}\n`);
+      return null;
     }
 
     try {
+      if (assetLastModified
+        && reusable?.lastModified === assetLastModified
+        && reusable?.type === asset.ext) {
+        process.stdout.write(`Reused ${asset.ext.toUpperCase()} ${asset.path}\n`);
+        return reusable;
+      }
+
       const record = await assetRecord(config, asset);
       process.stdout.write(`Indexed ${asset.ext.toUpperCase()} ${asset.path}\n`);
       return record;

@@ -15,6 +15,13 @@ the crawler visits each directory once and deduplicates assets by path. Keep
 `minimumFiles` above zero and `allowPartial` set to `false` so a bad root or failed
 download cannot replace a complete index.
 
+`deliveryEnvironments` is set to `preview` and `live`, so an asset is included only
+when its `main--elevance-healthyblue--gonsaje-vml.aem.page` preview URL or its
+corresponding `.aem.live` URL exists. A source-only asset is skipped. Removing an
+asset from both delivery environments removes it from the next generated index,
+even when its DA modification date has not changed. Unpublishing only the live copy
+does not remove an asset that is still previewed.
+
 The workflow runs when its implementation or configuration is pushed to `main`,
 every 15 minutes on the quarter hour, or when manually dispatched. Every run
 checks out and updates `main`.
@@ -49,7 +56,9 @@ npm run search:index:da -- --pdf-max-pages 20
 npm run search:index:da -- --skip-pdf-text
 ```
 
-The generator retries transient DA failures, writes atomically, enforces minimum
-and maximum record counts, and refuses partial output by default. Unchanged records
-are reused by path and DA modification time, avoiding repeated PDF downloads. If
-the complete index is unchanged, the generator also skips rewriting the output.
+The generator retries transient DA and delivery-status failures, writes atomically,
+enforces minimum and maximum record counts, and refuses partial output by default.
+Unchanged records are reused by path and DA modification time, avoiding repeated
+PDF downloads. Delivery status is checked before reuse so unpreviewed and
+unpublished assets are removed. If the complete index is unchanged, the generator
+also skips rewriting the output.

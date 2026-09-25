@@ -56,6 +56,8 @@ function runIndexer(workingDirectory, configPath, apiOrigin, { skipPdfText = fal
         ...process.env,
         DA_API_ORIGIN: apiOrigin,
         DA_IMS_TOKEN: 'test-token',
+        AEM_PREVIEW_ORIGIN: `${apiOrigin}/preview`,
+        AEM_LIVE_ORIGIN: `${apiOrigin}/live`,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -71,6 +73,8 @@ function runIndexer(workingDirectory, configPath, apiOrigin, { skipPdfText = fal
 test('recursively crawls and deduplicates multiple DA roots', async () => {
   const workspace = await mkdtemp(join(tmpdir(), 'asset-index-test-'));
   let pdfRequests = 0;
+  const previewed = new Set(['/docs/forms/logo.png']);
+  const published = new Set(['/docs/guide.pdf']);
   const responses = new Map([
     ['/list/test-org/test-site/docs', [
       { path: '/test-org/test-site/docs/forms', name: 'forms' },
@@ -101,6 +105,16 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
     ['/list/test-org/test-site/empty', []],
   ]);
   const server = createServer((request, response) => {
+    if (request.method === 'HEAD' && request.url.startsWith('/preview/')) {
+      const assetPath = request.url.slice('/preview'.length);
+      response.writeHead(previewed.has(assetPath) ? 200 : 404).end();
+      return;
+    }
+    if (request.method === 'HEAD' && request.url.startsWith('/live/')) {
+      const assetPath = request.url.slice('/live'.length);
+      response.writeHead(published.has(assetPath) ? 200 : 404).end();
+      return;
+    }
     if (request.url === '/source/test-org/test-site/docs/guide.pdf') {
       pdfRequests += 1;
       response.setHeader('content-type', 'application/pdf');
@@ -125,6 +139,8 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
     await writeFile(configPath, JSON.stringify({
       org: 'test-org',
       site: 'test-site',
+      branch: 'main',
+      deliveryEnvironments: ['preview', 'live'],
       roots: ['/docs', '/docs/forms', '/media'],
       output: 'assets.json',
       extensions: ['pdf', 'png', 'mp4'],
@@ -139,11 +155,10 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
     const result = await runIndexer(workspace, configPath, apiOrigin);
     assert.equal(result.code, 0, result.stderr);
     const index = JSON.parse(await readFile(join(workspace, 'assets.json'), 'utf8'));
-    assert.equal(index.total, 3);
+    assert.equal(index.total, 2);
     assert.deepEqual(index.data.map(({ path }) => path), [
       '/docs/forms/logo.png',
       '/docs/guide.pdf',
-      '/media/demo.mp4',
     ]);
     assert.equal(index.data[0].topic, 'media');
     assert.equal(index.data[1].topic, 'documents');
@@ -160,6 +175,17 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
     assert.match(repeated.stdout, /assets\.json is unchanged; skipped writing it\./);
     assert.equal(pdfRequests, 1);
     assert.equal((await stat(indexPath)).mtimeMs, modifiedBeforeRepeat);
+
+    published.delete('/docs/guide.pdf');
+    const afterUnpublish = await runIndexer(workspace, configPath, apiOrigin);
+    assert.equal(afterUnpublish.code, 0, afterUnpublish.stderr);
+    assert.match(
+      afterUnpublish.stdout,
+      /Skipped unpreviewed and unpublished \/docs\/guide\.pdf/,
+    );
+    const filteredIndex = JSON.parse(await readFile(indexPath, 'utf8'));
+    assert.deepEqual(filteredIndex.data.map(({ path }) => path), ['/docs/forms/logo.png']);
+    assert.equal(pdfRequests, 1);
 
     const completeIndex = await readFile(join(workspace, 'assets.json'), 'utf8');
     const emptyConfiguration = JSON.parse(await readFile(configPath, 'utf8'));
