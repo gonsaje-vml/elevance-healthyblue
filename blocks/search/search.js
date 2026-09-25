@@ -120,6 +120,12 @@ function renderResult(result, searchTerms, titleTag) {
   const li = document.createElement('li');
   const link = document.createElement('a');
   link.href = result.path;
+  const isPdf = String(result.type || '').toLowerCase() === 'pdf'
+    || new URL(result.path, window.location).pathname.toLowerCase().endsWith('.pdf');
+  if (isPdf) {
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  }
 
   if (result.image) {
     const wrapper = document.createElement('div');
