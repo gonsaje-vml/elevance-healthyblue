@@ -3,6 +3,10 @@ import {
   fetchPlaceholders,
   getMetadata,
 } from '../../scripts/aem.js';
+import {
+  decorateSearchAutocomplete,
+  getSearchPhraseSource,
+} from '../../scripts/search-autocomplete.js';
 import { loadFragment } from '../fragment/fragment.js';
 
 async function loadFirstFragment([path, ...remainingPaths]) {
@@ -82,11 +86,16 @@ function decorateNavSearch(navTools) {
   input.required = true;
   input.value = new URLSearchParams(window.location.search).get('q') || '';
 
+  const autocomplete = document.createElement('div');
+  autocomplete.className = 'search-autocomplete';
+  autocomplete.append(input);
+  decorateSearchAutocomplete(input, { source: getSearchPhraseSource() });
+
   const submit = document.createElement('button');
   submit.className = 'nav-search-submit';
   submit.type = 'submit';
   submit.textContent = 'Search';
-  panel.append(label, input, submit);
+  panel.append(label, autocomplete, submit);
   form.append(toggle, panel);
 
   const closeSearch = () => {
@@ -119,6 +128,10 @@ function decorateNavSearch(navTools) {
   });
 
   input.addEventListener('input', () => input.setCustomValidity(''));
+  input.addEventListener('search-autocomplete-select', () => {
+    input.setCustomValidity('');
+    form.requestSubmit();
+  });
   form.addEventListener('submit', (e) => {
     const query = input.value.trim();
     if (query.length < 3) {

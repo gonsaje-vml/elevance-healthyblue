@@ -123,6 +123,49 @@ button {
   font: inherit;
 }
 
+/* Shared autocomplete used by the Search block and header search. */
+.search-autocomplete {
+  position: relative;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.search-autocomplete > input {
+  width: 100%;
+}
+
+.search-autocomplete-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 10;
+  max-height: min(320px, 45vh);
+  margin: 0;
+  border: 1px solid var(--dark-color);
+  padding: 4px 0;
+  overflow-y: auto;
+  background: var(--background-color);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
+  list-style: none;
+}
+
+.search-autocomplete-list[hidden] {
+  display: none;
+}
+
+.search-autocomplete-option {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.search-autocomplete-option:hover,
+.search-autocomplete-option[aria-selected='true'] {
+  background: var(--light-color);
+}
+
 /* links */
 a:any-link {
   color: var(--link-color);

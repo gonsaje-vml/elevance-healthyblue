@@ -25,6 +25,12 @@ not mine arbitrary phrases from document body text, which would make suggestions
 large and noisy. A small curated synonym list can be layered in later if search
 analytics identify important terms that are absent from authored titles.
 
+The Search block and header search both load the matching phrase catalog once per
+page. Suggestions begin after three non-space characters, rank prefix matches
+first, and show at most eight values. Arrow keys move through the list, Enter
+selects a value, and Escape closes it. Selecting a header suggestion submits the
+search form; selecting a Search block suggestion refreshes the results in place.
+
 ## Configuration
 
 Edit `roots` and the safety limits in `asset-index.config.json`. Roots may overlap;

@@ -3,26 +3,22 @@ import {
   decorateIcons,
   fetchPlaceholders,
 } from '../../scripts/aem.js';
+import {
+  decorateSearchAutocomplete,
+  getSearchPhraseSource,
+  isPreviewSearchHost,
+  normalizeSearchText,
+} from '../../scripts/search-autocomplete.js';
 
 const searchParams = new URLSearchParams(window.location.search);
 const dataCache = new Map();
 const MIN_QUERY_LENGTH = 3;
 const SEARCH_DELAY = 200;
-const isPreview = window.location.hostname.endsWith('.aem.page')
-  || window.location.hostname.endsWith('.hlx.page')
-  || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const isPreview = isPreviewSearchHost();
 const assetIndexSource = isPreview ? '/asset-index-preview.json' : '/asset-index.json';
 const DEFAULT_SOURCES = ['/query-index.json', assetIndexSource];
+const PHRASE_SOURCE = getSearchPhraseSource();
 let searchInstance = 0;
-
-function normalizeText(value = '') {
-  return String(value)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function findNextHeading(el) {
   let preceedingEl = el.parentElement.previousElement || el.parentElement.parentElement;
@@ -225,12 +221,12 @@ function renderError(block, config) {
 }
 
 function containsAll(value, searchTerms) {
-  const normalizedValue = normalizeText(value);
+  const normalizedValue = normalizeSearchText(value);
   return searchTerms.every((term) => normalizedValue.includes(term));
 }
 
 function scoreResult(result, query, searchTerms) {
-  const title = normalizeText(result.title);
+  const title = normalizeSearchText(result.title);
   if (title === query) return 0;
   if (title.startsWith(query)) return 10;
   if (containsAll(title, searchTerms)) return 20;
@@ -242,7 +238,8 @@ function scoreResult(result, query, searchTerms) {
 
 function filterData(searchTerms, query, data) {
   return data
-    .filter((result) => result?.path && !normalizeText(result.robots).includes('noindex'))
+    .filter((result) => result?.path
+      && !normalizeSearchText(result.robots).includes('noindex'))
     .map((result) => {
       const title = result.title || result.header || result.path.split('/').pop();
       const type = result.type || (result.path.toLowerCase().endsWith('.pdf') ? 'pdf' : 'page');
@@ -292,7 +289,7 @@ async function handleSearch(e, block, config) {
     return;
   }
 
-  const query = normalizeText(searchValue);
+  const query = normalizeSearchText(searchValue);
   const searchTerms = query.split(/\s+/).filter((term) => !!term);
   setSearchStatus(block, 'Searching...');
 
@@ -341,10 +338,19 @@ function searchInput(block, config) {
 
   input.addEventListener('keyup', (e) => {
     if (e.code === 'Escape') {
+      if (input.dataset.autocompleteEscape === 'true') {
+        delete input.dataset.autocompleteEscape;
+        return;
+      }
       window.clearTimeout(timer);
       input.value = '';
       clearSearch(block);
     }
+  });
+
+  input.addEventListener('search-autocomplete-select', () => {
+    window.clearTimeout(timer);
+    handleSearch({ target: input }, block, config);
   });
 
   return input;
@@ -360,13 +366,17 @@ function searchBox(block, config) {
   const box = document.createElement('div');
   box.classList.add('search-box');
   const input = searchInput(block, config);
+  const autocomplete = document.createElement('div');
+  autocomplete.className = 'search-autocomplete';
+  autocomplete.append(input);
+  decorateSearchAutocomplete(input, { source: config.phraseSource });
   const label = document.createElement('label');
   label.htmlFor = input.id;
   label.textContent = config.placeholders.searchLabel || 'Search';
   box.append(
     label,
     searchIcon(),
-    input,
+    autocomplete,
   );
 
   return box;
@@ -382,7 +392,7 @@ export default async function decorate(block) {
     .map((source) => new URL(source, window.location).href))];
   block.innerHTML = '';
   block.append(
-    searchBox(block, { sources, placeholders }),
+    searchBox(block, { sources, placeholders, phraseSource: PHRASE_SOURCE }),
     searchStatus(),
     searchResultsContainer(block),
   );

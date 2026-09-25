@@ -13,7 +13,7 @@
     "search:phrases": "npm-run-all -s search:phrases:preview search:phrases:live",
     "search:phrases:preview": "node tools/build-search-key-phrases.mjs --config asset-index.config.json --delivery-environment preview",
     "search:phrases:live": "node tools/build-search-key-phrases.mjs --config asset-index.config.json --delivery-environment live",
-    "test:search-index": "node --test tools/build-da-source-index.test.mjs tools/build-search-key-phrases.test.mjs",
+    "test:search-index": "node --test tools/build-da-source-index.test.mjs tools/build-search-key-phrases.test.mjs tools/search-autocomplete.test.mjs",
     "search:index:local": "node tools/build-local-search-index.mjs",
     "build:json": "npm-run-all -p build:json:models build:json:definitions build:json:filters",
     "build:json:models": "merge-json-cli -i \"ue/models/component-models.json\" -o \"component-models.json\"",
