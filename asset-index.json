@@ -2,10 +2,30 @@
   "_meta": {
     "fingerprint": "737210e85e919337da49d46c8a3d0c1d630a5b4ebbd52868e6834f85c4940a97"
   },
-  "total": 2,
+  "total": 5,
   "offset": 0,
-  "limit": 2,
+  "limit": 5,
   "data": [
+    {
+      "path": "/docs/file-example-ppt-1mb.ppt",
+      "title": "File Example Ppt 1mb",
+      "header": "File Example Ppt 1mb",
+      "description": "",
+      "content": "",
+      "topic": "documents",
+      "type": "ppt",
+      "lastModified": "2026-09-25T16:37:35.599Z"
+    },
+    {
+      "path": "/docs/file-sample-1mb.docx",
+      "title": "File Sample 1mb",
+      "header": "File Sample 1mb",
+      "description": "",
+      "content": "",
+      "topic": "documents",
+      "type": "docx",
+      "lastModified": "2026-09-25T16:37:28.233Z"
+    },
     {
       "path": "/docs/nc-caid-knownissueslist.pdf",
       "title": "Nc Caid Knownissueslist",
@@ -25,6 +45,16 @@
       "topic": "documents",
       "type": "pdf",
       "lastModified": "2026-09-16T18:25:08.996Z"
+    },
+    {
+      "path": "/docs/nc-caid-readysetrenewbenefits.pdf",
+      "title": "Nc Caid Readysetrenewbenefits",
+      "header": "Nc Caid Readysetrenewbenefits",
+      "description": "Ready, Set, Renew! NCHB-CD-018006-22-CPN17983 Note: Availity, LLC is an independent company providing administrative support services for Healthy Blue providers on behalf of Blue Cross and Blue Shield of North Carolina. https://provider.hea",
+      "content": "Ready, Set, Renew! NCHB-CD-018006-22-CPN17983 Note: Availity, LLC is an independent company providing administrative support services for Healthy Blue providers on behalf of Blue Cross and Blue Shield of North Carolina. https://provider.healthybluenc.com Healthy Blue is a Medicaid plan offered by Blue Cross and Blue Shield of North Carolina. Blue Cross and Blue Shield of North Carolina is an independent licensee of the Blue Cross Blue Shield Association. ® Marks of the Blue Cross and Blue Shield Association. ® Marks of the Blue Cross Blue Shield Association. All other marks are the property of their respective owners. It’s time for some of your patients to renew their Medicaid benefits. As states begin to recommence Medicaid renewals, we want to ensure that you have the information needed to help your Medicaid patients renew their healthcare coverage. Some patients have never had to renew their coverage at all, while other patients may have forgotten the process entirely. We’re here to help. Availity Chat with Payer is available during normal business hours. Get answers to your questions about eligibility, benefits, authorizations, claims status, and more. To access Availity Essentials,* go to availity.com and select the appropriate payer space tile from the drop-down. Then, select Chat with Payer and complete the pre-chat form to start your chat. For additional support, visit the Contact Us section at the bottom of our provider website for the appropriate contact or contact Healthy Blue Provider Services at 844-594-5072 . What steps do my patients need to take? Ready: Patient gets their documents ready. Set: Patient ensures their form is all set. Renew: Patient ensures their form is all set. • Patient should report all changes to Division of Social Services (DSS). • Patient should ensure their information on file with DSS is correct (income or change in household, marriage, or divorce). • Patient should check their mail. • Patient will need to respond to the letter their local DSS sends regarding Medicaid coverage if information is needed.",
+      "topic": "documents",
+      "type": "pdf",
+      "lastModified": "2026-09-25T16:36:14.019Z"
     }
   ]
 }
