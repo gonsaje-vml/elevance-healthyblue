@@ -1,6 +1,6 @@
-# Automated sandbox-search asset index
+# Automated asset index
 
-The `Refresh sandbox search asset index` GitHub Actions workflow inventories
+The `Refresh search asset index` GitHub Actions workflow inventories
 downloadable files in selected Document Authoring directories and refreshes the
 repository-root `asset-index.json`. PDF text is extracted so the Search block can
 match body content; other supported files receive searchable filename metadata.
@@ -15,11 +15,9 @@ the crawler visits each directory once and deduplicates assets by path. Keep
 `minimumFiles` above zero and `allowPartial` set to `false` so a bad root or failed
 download cannot replace a complete index.
 
-The sandbox workflow runs when its implementation or configuration is pushed to
-`sandbox-search`. GitHub only schedules workflows from a repository's default
-branch, so the daily 05:23 UTC schedule starts after this workflow file also lands
-on the default branch. Scheduled and manual runs explicitly update
-`sandbox-search`.
+The workflow runs when its implementation or configuration is pushed to `main`,
+every 15 minutes on the quarter hour, or when manually dispatched. Every run
+checks out and updates `main`.
 
 ## Authentication
 
@@ -53,4 +51,5 @@ npm run search:index:da -- --skip-pdf-text
 
 The generator retries transient DA failures, writes atomically, enforces minimum
 and maximum record counts, and refuses partial output by default. Unchanged records
-are reused by path and DA modification time, avoiding repeated PDF downloads.
+are reused by path and DA modification time, avoiding repeated PDF downloads. If
+the complete index is unchanged, the generator also skips rewriting the output.
