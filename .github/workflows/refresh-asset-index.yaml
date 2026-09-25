@@ -66,10 +66,53 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `path=${output}\n`);
           '
 
+      - name: Create short-lived Adobe IMS token
+        env:
+          ADOBE_CLIENT_ID: ${{ secrets.ADOBE_CLIENT_ID }}
+          ADOBE_CLIENT_SECRET: ${{ secrets.ADOBE_CLIENT_SECRET }}
+          ADOBE_SCOPES: ${{ secrets.ADOBE_SCOPES }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+
+          const required = ['ADOBE_CLIENT_ID', 'ADOBE_CLIENT_SECRET', 'ADOBE_SCOPES'];
+          const missing = required.filter((name) => !process.env[name]?.trim());
+          if (missing.length) {
+            throw new Error(`Missing required GitHub Actions secrets: ${missing.join(', ')}`);
+          }
+
+          const scopes = process.env.ADOBE_SCOPES
+            .replaceAll('\\_', '_')
+            .split(',')
+            .map((scope) => scope.trim())
+            .filter(Boolean)
+            .join(',');
+          const body = new URLSearchParams({
+            grant_type: 'client_credentials',
+            client_id: process.env.ADOBE_CLIENT_ID,
+            client_secret: process.env.ADOBE_CLIENT_SECRET,
+            scope: scopes,
+          });
+          const response = await fetch('https://ims-na1.adobelogin.com/ims/token/v3', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body,
+            signal: AbortSignal.timeout(30000),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload.access_token) {
+            const detail = payload.error_description || payload.error || 'No access token returned.';
+            throw new Error(`Adobe IMS token request failed with HTTP ${response.status}: ${detail}`);
+          }
+
+          process.stdout.write(`::add-mask::${payload.access_token}\n`);
+          appendFileSync(process.env.GITHUB_ENV, `DA_IMS_TOKEN=${payload.access_token}\n`);
+          process.stdout.write(`Created an Adobe IMS token valid for ${payload.expires_in || 'an unknown number of'} seconds.\n`);
+          NODE
+
       - name: Build asset-index.json
         env:
           ASSET_INDEX_ROOTS: ${{ inputs.roots }}
-          DA_IMS_TOKEN: ${{ secrets.DA_IMS_TOKEN }}
         run: npm run search:index:da
 
       - name: Detect index changes

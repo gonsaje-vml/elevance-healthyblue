@@ -23,13 +23,17 @@ on the default branch. Scheduled and manual runs explicitly update
 
 ## Authentication
 
-Create the repository Actions secret `DA_IMS_TOKEN` with read access to
-`gonsaje-vml/elevance-healthyblue`. The workflow also needs permission to write
-repository contents and branch protection must allow its generated commit.
+Create these repository Actions secrets from an Adobe OAuth Server-to-Server
+credential whose technical account can read `gonsaje-vml/elevance-healthyblue`:
 
-IMS bearer tokens expire. Refresh the secret after HTTP 401 or 403 failures, or
-replace it with an organization-approved renewable credential when one is
-available.
+- `ADOBE_CLIENT_ID`
+- `ADOBE_CLIENT_SECRET`
+- `ADOBE_SCOPES`
+
+The workflow exchanges them for a short-lived IMS access token at the start of
+each run and masks the token before passing it to the indexer. The workflow also
+needs permission to write repository contents, and branch protection must allow
+its generated commit.
 
 ## Local use
 
