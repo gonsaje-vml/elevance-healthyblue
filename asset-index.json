@@ -2,30 +2,10 @@
   "_meta": {
     "fingerprint": "737210e85e919337da49d46c8a3d0c1d630a5b4ebbd52868e6834f85c4940a97"
   },
-  "total": 5,
+  "total": 3,
   "offset": 0,
-  "limit": 5,
+  "limit": 3,
   "data": [
-    {
-      "path": "/docs/file-example-ppt-1mb.ppt",
-      "title": "File Example Ppt 1mb",
-      "header": "File Example Ppt 1mb",
-      "description": "",
-      "content": "",
-      "topic": "documents",
-      "type": "ppt",
-      "lastModified": "2026-09-25T16:37:35.599Z"
-    },
-    {
-      "path": "/docs/file-sample-1mb.docx",
-      "title": "File Sample 1mb",
-      "header": "File Sample 1mb",
-      "description": "",
-      "content": "",
-      "topic": "documents",
-      "type": "docx",
-      "lastModified": "2026-09-25T16:37:28.233Z"
-    },
     {
       "path": "/docs/nc-caid-knownissueslist.pdf",
       "title": "Nc Caid Knownissueslist",
