@@ -261,22 +261,26 @@ function configurationFingerprint(config) {
     .digest('hex');
 }
 
-async function loadReusableRecords(outputPath, fingerprint) {
+async function loadExistingIndex(outputPath, fingerprint) {
   try {
-    const existing = JSON.parse(await readFile(outputPath, 'utf8'));
+    const content = await readFile(outputPath, 'utf8');
+    const existing = JSON.parse(content);
     // The underscore distinguishes generator metadata from searchable record fields.
     // eslint-disable-next-line no-underscore-dangle
     if (existing?._meta?.fingerprint !== fingerprint || !Array.isArray(existing.data)) {
-      return new Map();
+      return { content, records: new Map() };
     }
-    return new Map(existing.data
-      .filter((record) => record?.path)
-      .map((record) => [record.path, record]));
+    return {
+      content,
+      records: new Map(existing.data
+        .filter((record) => record?.path)
+        .map((record) => [record.path, record])),
+    };
   } catch (error) {
     if (error.code !== 'ENOENT') {
       process.stderr.write(`Existing index cannot be reused: ${error.message}\n`);
     }
-    return new Map();
+    return { content: '', records: new Map() };
   }
 }
 
@@ -375,7 +379,7 @@ async function mapConcurrent(items, concurrency, mapper) {
   return results;
 }
 
-async function writeIndex(outputPath, records, fingerprint) {
+async function writeIndex(outputPath, records, fingerprint, existingContent) {
   const index = {
     _meta: {
       fingerprint,
@@ -385,15 +389,19 @@ async function writeIndex(outputPath, records, fingerprint) {
     limit: records.length,
     data: records,
   };
+  const content = `${JSON.stringify(index, null, 2)}\n`;
+  if (content === existingContent) return false;
+
   const temporaryPath = `${outputPath}.tmp-${process.pid}`;
   await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(temporaryPath, `${JSON.stringify(index, null, 2)}\n`, 'utf8');
+  await writeFile(temporaryPath, content, 'utf8');
   try {
     await rename(temporaryPath, outputPath);
   } catch (error) {
     await unlink(temporaryPath).catch(() => {});
     throw error;
   }
+  return true;
 }
 
 async function main() {
@@ -413,12 +421,12 @@ async function main() {
     );
   }
   const fingerprint = configurationFingerprint(config);
-  const reusableRecords = await loadReusableRecords(config.outputPath, fingerprint);
+  const existingIndex = await loadExistingIndex(config.outputPath, fingerprint);
   const failures = [];
 
   const candidates = await mapConcurrent(assets, config.concurrency, async (asset) => {
     const assetLastModified = lastModified(asset.lastModified);
-    const reusable = reusableRecords.get(asset.path);
+    const reusable = existingIndex.records.get(asset.path);
     if (assetLastModified
       && reusable?.lastModified === assetLastModified
       && reusable?.type === asset.ext) {
@@ -457,11 +465,20 @@ async function main() {
   const records = candidates
     .filter(Boolean)
     .sort((left, right) => left.path.localeCompare(right.path));
-  await writeIndex(config.outputPath, records, fingerprint);
   const output = relative(process.cwd(), config.outputPath);
-  process.stdout.write(
-    `Generated ${output} with ${records.length} assets from ${config.roots.join(', ')}.\n`,
+  const wroteIndex = await writeIndex(
+    config.outputPath,
+    records,
+    fingerprint,
+    existingIndex.content,
   );
+  if (wroteIndex) {
+    process.stdout.write(
+      `Generated ${output} with ${records.length} assets from ${config.roots.join(', ')}.\n`,
+    );
+  } else {
+    process.stdout.write(`${output} is unchanged; skipped writing it.\n`);
+  }
 }
 
 main().catch((error) => {

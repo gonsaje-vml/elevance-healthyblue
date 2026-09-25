@@ -5,6 +5,8 @@ import {
   mkdtemp,
   readFile,
   rm,
+  stat,
+  utimes,
   writeFile,
 } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -148,10 +150,16 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
     assert.equal(index.data[1].lastModified, '2023-11-14T22:13:20.000Z');
     assert.match(index.data[1].content, /Automated PDF content/);
 
+    const indexPath = join(workspace, 'assets.json');
+    const oldTimestamp = new Date('2000-01-01T00:00:00.000Z');
+    await utimes(indexPath, oldTimestamp, oldTimestamp);
+    const modifiedBeforeRepeat = (await stat(indexPath)).mtimeMs;
     const repeated = await runIndexer(workspace, configPath, apiOrigin);
     assert.equal(repeated.code, 0, repeated.stderr);
     assert.match(repeated.stdout, /Reused PDF \/docs\/guide\.pdf/);
+    assert.match(repeated.stdout, /assets\.json is unchanged; skipped writing it\./);
     assert.equal(pdfRequests, 1);
+    assert.equal((await stat(indexPath)).mtimeMs, modifiedBeforeRepeat);
 
     const completeIndex = await readFile(join(workspace, 'assets.json'), 'utf8');
     const emptyConfiguration = JSON.parse(await readFile(configPath, 'utf8'));
