@@ -110,6 +110,28 @@ jobs:
           process.stdout.write(`Created an Adobe IMS token valid for ${payload.expires_in || 'an unknown number of'} seconds.\n`);
           NODE
 
+      - name: Verify DA read access
+        run: |
+          node --input-type=module <<'NODE'
+          const url = 'https://admin.da.live/list/gonsaje-vml/elevance-healthyblue/docs';
+          const response = await fetch(url, {
+            headers: {
+              Accept: 'application/json',
+              Authorization: `Bearer ${process.env.DA_IMS_TOKEN}`,
+            },
+            signal: AbortSignal.timeout(30000),
+          });
+          if (!response.ok) {
+            process.stderr.write(
+              `::error title=DA access check failed::Technical account received HTTP ${response.status} from ${url}.\n`,
+            );
+            process.exit(1);
+          }
+          const items = await response.json();
+          if (!Array.isArray(items)) throw new Error('DA List API did not return an array.');
+          process.stdout.write(`DA access verified; found ${items.length} direct entries under /docs.\n`);
+          NODE
+
       - name: Build asset-index.json
         env:
           ASSET_INDEX_ROOTS: ${{ inputs.roots }}
