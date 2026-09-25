@@ -8,7 +8,11 @@ const searchParams = new URLSearchParams(window.location.search);
 const dataCache = new Map();
 const MIN_QUERY_LENGTH = 3;
 const SEARCH_DELAY = 200;
-const DEFAULT_SOURCES = ['/query-index.json', '/asset-index.json'];
+const isPreview = window.location.hostname.endsWith('.aem.page')
+  || window.location.hostname.endsWith('.hlx.page')
+  || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const assetIndexSource = isPreview ? '/asset-index-preview.json' : '/asset-index.json';
+const DEFAULT_SOURCES = ['/query-index.json', assetIndexSource];
 let searchInstance = 0;
 
 function normalizeText(value = '') {

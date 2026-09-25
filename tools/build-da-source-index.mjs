@@ -46,6 +46,7 @@ Options:
   --config <file>         Configuration file (default: asset-index.config.json)
   --roots <paths>         Comma-separated directory override
   --output <file>         Output override
+  --delivery-environment  Delivery tier to index: preview or live
   --max-files <count>     Safety-limit override
   --pdf-max-pages <count> PDF page limit; 0 extracts every page
   --skip-pdf-text         Include PDFs without extracting their text
@@ -102,17 +103,12 @@ function normalizeExtensions(values) {
   return new Set(values.map((value) => String(value).toLowerCase().replace(/^\./, '')));
 }
 
-function normalizeDeliveryEnvironments(values) {
-  if (values === undefined) return [];
-  if (!Array.isArray(values) || !values.length) {
-    throw new Error('deliveryEnvironments must be a non-empty array when configured.');
+function normalizeDeliveryEnvironment(value) {
+  const environment = String(value || '').toLowerCase();
+  if (!DELIVERY_ENVIRONMENTS.has(environment)) {
+    throw new Error('deliveryEnvironment must be either preview or live.');
   }
-  const environments = [...new Set(values.map((value) => String(value).toLowerCase()))];
-  const unsupported = environments.filter((value) => !DELIVERY_ENVIRONMENTS.has(value));
-  if (unsupported.length) {
-    throw new Error(`Unsupported delivery environment: ${unsupported.join(', ')}.`);
-  }
-  return environments;
+  return environment;
 }
 
 function deliveryOrigin(config, environment) {
@@ -127,13 +123,17 @@ async function loadConfiguration(args) {
   const configPath = resolve(process.cwd(), option(args, 'config') || DEFAULT_CONFIG_PATH);
   const config = JSON.parse(await readFile(configPath, 'utf8'));
   const rootsOverride = option(args, 'roots') || process.env.ASSET_INDEX_ROOTS;
+  const deliveryEnvironment = normalizeDeliveryEnvironment(
+    option(args, 'delivery-environment') || config.deliveryEnvironment || 'live',
+  );
+  const configuredOutput = config.outputs?.[deliveryEnvironment] || config.output;
 
   return {
     org: process.env.DA_ORG || config.org,
     site: process.env.DA_SITE || config.site,
     branch: process.env.AEM_BRANCH || config.branch || 'main',
     roots: parseRoots(rootsOverride || config.roots),
-    outputPath: safeOutputPath(option(args, 'output') || config.output),
+    outputPath: safeOutputPath(option(args, 'output') || configuredOutput),
     extensions: normalizeExtensions(config.extensions),
     minimumFiles: positiveInteger(config.minimumFiles ?? 1, 'minimumFiles', { allowZero: true }),
     maxFiles: positiveInteger(option(args, 'max-files') || config.maxFiles, 'maxFiles'),
@@ -149,7 +149,7 @@ async function loadConfiguration(args) {
     concurrency: positiveInteger(config.concurrency || 2, 'concurrency'),
     skipPdfText: hasFlag(args, 'skip-pdf-text'),
     allowPartial: hasFlag(args, 'allow-partial') || config.allowPartial === true,
-    deliveryEnvironments: normalizeDeliveryEnvironments(config.deliveryEnvironments),
+    deliveryEnvironment,
     apiOrigin: process.env.DA_API_ORIGIN || DEFAULT_API_ORIGIN,
   };
 }
@@ -173,17 +173,25 @@ function deliveryUrl(config, environment, path) {
   return `${deliveryOrigin(config, environment).replace(/\/$/, '')}${normalizedPath}`;
 }
 
-async function deliveryStatus(config, environment, path) {
+async function deliveryFetch(
+  config,
+  environment,
+  path,
+  { method = 'HEAD', accept = '*/*', allowMissing = false } = {},
+) {
   const url = deliveryUrl(config, environment, path);
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     let response;
     try {
-      // HEAD verifies delivery without downloading the asset again.
+      // Status checks use HEAD; PDF extraction uses GET for the matching tier.
       // eslint-disable-next-line no-await-in-loop
       response = await fetch(url, {
-        method: 'HEAD',
-        headers: { 'User-Agent': 'elevance-da-asset-index/1.0' },
+        method,
+        headers: {
+          Accept: accept,
+          'User-Agent': 'elevance-da-asset-index/1.0',
+        },
         signal: AbortSignal.timeout(30000),
       });
     } catch (error) {
@@ -193,8 +201,8 @@ async function deliveryStatus(config, environment, path) {
     }
 
     if (response) {
-      if (response.ok) return true;
-      if ([404, 410].includes(response.status)) return false;
+      if (response.ok) return response;
+      if (allowMissing && [404, 410].includes(response.status)) return null;
       if ([401, 403].includes(response.status)) {
         throw new Error(
           `${environment} status for ${path} returned HTTP ${response.status}. `
@@ -212,22 +220,14 @@ async function deliveryStatus(config, environment, path) {
   throw new Error(`${environment} status for ${path} failed after all retries.`);
 }
 
-async function isDelivered(config, path) {
-  if (!config.deliveryEnvironments.length) return true;
-  let firstError;
-
-  for (const environment of config.deliveryEnvironments) {
-    try {
-      // Stop as soon as one configured environment contains the asset.
-      // eslint-disable-next-line no-await-in-loop
-      if (await deliveryStatus(config, environment, path)) return true;
-    } catch (error) {
-      firstError ||= error;
-    }
-  }
-
-  if (firstError) throw firstError;
-  return false;
+async function deliveryStatus(config, path) {
+  const response = await deliveryFetch(config, config.deliveryEnvironment, path, {
+    allowMissing: true,
+  });
+  if (!response) return null;
+  return {
+    lastModified: lastModified(response.headers.get('last-modified')),
+  };
 }
 
 function wait(milliseconds) {
@@ -350,7 +350,7 @@ function configurationFingerprint(config) {
     contentMaxCharacters: config.contentMaxCharacters,
     skipPdfText: config.skipPdfText,
     branch: config.branch,
-    deliveryEnvironments: [...config.deliveryEnvironments].sort(),
+    deliveryEnvironment: config.deliveryEnvironment,
   };
   return createHash('sha256')
     .update(JSON.stringify(relevantConfiguration))
@@ -409,7 +409,12 @@ function lastModified(value) {
 
 async function extractPdf(config, file) {
   if (config.skipPdfText) return { content: '', title: '' };
-  const response = await daFetch(config, 'source', file.path, 'application/pdf');
+  const response = await deliveryFetch(
+    config,
+    config.deliveryEnvironment,
+    file.path,
+    { method: 'GET', accept: 'application/pdf' },
+  );
   const bytes = new Uint8Array(await response.arrayBuffer());
   const pdf = await getDocument({ data: bytes, useSystemFonts: true }).promise;
 
@@ -439,7 +444,7 @@ async function extractPdf(config, file) {
   }
 }
 
-async function assetRecord(config, file) {
+async function assetRecord(config, file, deliveredLastModified) {
   const extracted = file.ext === 'pdf'
     ? await extractPdf(config, file)
     : { content: '', title: '' };
@@ -453,7 +458,7 @@ async function assetRecord(config, file) {
     content: extracted.content,
     topic: assetTopic(file.ext),
     type: file.ext,
-    lastModified: lastModified(file.lastModified),
+    lastModified: deliveredLastModified,
   };
 }
 
@@ -523,30 +528,32 @@ async function main() {
   const candidates = await mapConcurrent(assets, config.concurrency, async (asset) => {
     const assetLastModified = lastModified(asset.lastModified);
     const reusable = existingIndex.records.get(asset.path);
-    let delivered;
+    let delivery;
 
     try {
-      delivered = await isDelivered(config, asset.path);
+      delivery = await deliveryStatus(config, asset.path);
     } catch (error) {
       failures.push({ path: asset.path, message: error.message });
       process.stderr.write(`Failed ${asset.path}: ${error.message}\n`);
       return null;
     }
 
-    if (!delivered) {
-      process.stdout.write(`Skipped unpreviewed and unpublished ${asset.path}\n`);
+    if (!delivery) {
+      process.stdout.write(`Skipped ${config.deliveryEnvironment}-only missing ${asset.path}\n`);
       return null;
     }
 
+    const deliveredLastModified = delivery.lastModified || assetLastModified;
+
     try {
-      if (assetLastModified
-        && reusable?.lastModified === assetLastModified
+      if (deliveredLastModified
+        && reusable?.lastModified === deliveredLastModified
         && reusable?.type === asset.ext) {
         process.stdout.write(`Reused ${asset.ext.toUpperCase()} ${asset.path}\n`);
         return reusable;
       }
 
-      const record = await assetRecord(config, asset);
+      const record = await assetRecord(config, asset, deliveredLastModified);
       process.stdout.write(`Indexed ${asset.ext.toUpperCase()} ${asset.path}\n`);
       return record;
     } catch (error) {
@@ -563,7 +570,7 @@ async function main() {
         content: '',
         topic: assetTopic(asset.ext),
         type: asset.ext,
-        lastModified: lastModified(asset.lastModified),
+        lastModified: deliveredLastModified,
       };
     }
   });
@@ -585,7 +592,8 @@ async function main() {
   );
   if (wroteIndex) {
     process.stdout.write(
-      `Generated ${output} with ${records.length} assets from ${config.roots.join(', ')}.\n`,
+      `Generated ${output} with ${records.length} ${config.deliveryEnvironment} assets `
+      + `from ${config.roots.join(', ')}.\n`,
     );
   } else {
     process.stdout.write(`${output} is unchanged; skipped writing it.\n`);

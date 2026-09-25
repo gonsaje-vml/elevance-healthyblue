@@ -9,6 +9,7 @@ on:
       - asset-index.config.json
       - package.json
       - package-lock.json
+      - blocks/search/search.js
       - tools/build-da-source-index.mjs
       - tools/build-da-source-index.test.mjs
   schedule:
@@ -50,18 +51,21 @@ jobs:
       - name: Test asset index generator
         run: npm run test:search-index
 
-      - name: Read configured output path
+      - name: Read configured output paths
         id: config
         run: |
           node -e '
             const fs = require("node:fs");
-            const { output } = JSON.parse(fs.readFileSync("asset-index.config.json", "utf8"));
-            const invalid = typeof output !== "string"
+            const { outputs } = JSON.parse(fs.readFileSync("asset-index.config.json", "utf8"));
+            const paths = Object.values(outputs || {});
+            const invalid = paths.length !== 2 || paths.some((output) => (
+              typeof output !== "string"
               || output.startsWith("/")
               || output.split("/").includes("..")
-              || !/^[A-Za-z0-9._/-]+$/.test(output);
-            if (invalid) throw new Error("Configured output must be a safe repository-relative path.");
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, `path=${output}\n`);
+              || !/^[A-Za-z0-9._/-]+$/.test(output)
+            ));
+            if (invalid) throw new Error("Configure two safe repository-relative output paths.");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `paths=${paths.join(" ")}\n`);
           '
 
       - name: Create short-lived Adobe IMS token
@@ -130,7 +134,7 @@ jobs:
           process.stdout.write(`DA access verified; found ${items.length} direct entries under /docs.\n`);
           NODE
 
-      - name: Build asset-index.json
+      - name: Build preview and live asset indexes
         env:
           ASSET_INDEX_ROOTS: ${{ inputs.roots }}
         run: npm run search:index:da
@@ -138,22 +142,24 @@ jobs:
       - name: Detect index changes
         id: changes
         env:
-          ASSET_INDEX_OUTPUT: ${{ steps.config.outputs.path }}
+          ASSET_INDEX_OUTPUTS: ${{ steps.config.outputs.paths }}
         run: |
-          if [ -n "$(git status --porcelain -- "$ASSET_INDEX_OUTPUT")" ]; then
+          read -ra output_paths <<< "$ASSET_INDEX_OUTPUTS"
+          if [ -n "$(git status --porcelain -- "${output_paths[@]}")" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "$ASSET_INDEX_OUTPUT is already current."
+            echo "$ASSET_INDEX_OUTPUTS are already current."
           fi
 
       - name: Commit updated index
         if: steps.changes.outputs.changed == 'true'
         env:
-          ASSET_INDEX_OUTPUT: ${{ steps.config.outputs.path }}
+          ASSET_INDEX_OUTPUTS: ${{ steps.config.outputs.paths }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "$ASSET_INDEX_OUTPUT"
-          git commit -m "chore(search): refresh asset index"
+          read -ra output_paths <<< "$ASSET_INDEX_OUTPUTS"
+          git add -- "${output_paths[@]}"
+          git commit -m "chore(search): refresh asset indexes"
           git push origin "HEAD:main"

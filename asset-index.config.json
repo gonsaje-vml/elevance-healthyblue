@@ -2,14 +2,13 @@
   "org": "gonsaje-vml",
   "site": "elevance-healthyblue",
   "branch": "main",
-  "deliveryEnvironments": [
-    "preview",
-    "live"
-  ],
+  "outputs": {
+    "preview": "asset-index-preview.json",
+    "live": "asset-index.json"
+  },
   "roots": [
     "/docs"
   ],
-  "output": "asset-index.json",
   "extensions": [
     "pdf",
     "doc",

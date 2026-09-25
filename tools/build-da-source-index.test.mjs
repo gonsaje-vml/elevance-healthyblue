@@ -46,9 +46,20 @@ function createPdf(text) {
   return Buffer.from(pdf);
 }
 
-function runIndexer(workingDirectory, configPath, apiOrigin, { skipPdfText = false } = {}) {
+function runIndexer(
+  workingDirectory,
+  configPath,
+  apiOrigin,
+  { deliveryEnvironment = 'live', skipPdfText = false } = {},
+) {
   return new Promise((resolveRun, rejectRun) => {
-    const argumentsList = [script, '--config', configPath];
+    const argumentsList = [
+      script,
+      '--config',
+      configPath,
+      '--delivery-environment',
+      deliveryEnvironment,
+    ];
     if (skipPdfText) argumentsList.push('--skip-pdf-text');
     const child = spawn(process.execPath, argumentsList, {
       cwd: workingDirectory,
@@ -107,18 +118,24 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
   const server = createServer((request, response) => {
     if (request.method === 'HEAD' && request.url.startsWith('/preview/')) {
       const assetPath = request.url.slice('/preview'.length);
+      if (previewed.has(assetPath)) {
+        response.setHeader('last-modified', 'Tue, 14 Nov 2023 22:13:21 GMT');
+      }
       response.writeHead(previewed.has(assetPath) ? 200 : 404).end();
       return;
     }
     if (request.method === 'HEAD' && request.url.startsWith('/live/')) {
       const assetPath = request.url.slice('/live'.length);
+      if (published.has(assetPath)) {
+        response.setHeader('last-modified', 'Tue, 14 Nov 2023 22:13:20 GMT');
+      }
       response.writeHead(published.has(assetPath) ? 200 : 404).end();
       return;
     }
-    if (request.url === '/source/test-org/test-site/docs/guide.pdf') {
+    if (request.method === 'GET' && request.url === '/live/docs/guide.pdf') {
       pdfRequests += 1;
       response.setHeader('content-type', 'application/pdf');
-      response.end(createPdf('Automated PDF content'));
+      response.end(createPdf('Published PDF content'));
       return;
     }
     const body = responses.get(request.url);
@@ -140,9 +157,11 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
       org: 'test-org',
       site: 'test-site',
       branch: 'main',
-      deliveryEnvironments: ['preview', 'live'],
+      outputs: {
+        preview: 'assets-preview.json',
+        live: 'assets.json',
+      },
       roots: ['/docs', '/docs/forms', '/media'],
-      output: 'assets.json',
       extensions: ['pdf', 'png', 'mp4'],
       minimumFiles: 1,
       maxFiles: 10,
@@ -152,18 +171,26 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
       allowPartial: false,
     }));
 
+    const previewResult = await runIndexer(
+      workspace,
+      configPath,
+      apiOrigin,
+      { deliveryEnvironment: 'preview' },
+    );
+    assert.equal(previewResult.code, 0, previewResult.stderr);
+    const previewIndex = JSON.parse(
+      await readFile(join(workspace, 'assets-preview.json'), 'utf8'),
+    );
+    assert.deepEqual(previewIndex.data.map(({ path }) => path), ['/docs/forms/logo.png']);
+    assert.equal(previewIndex.data[0].topic, 'media');
+
     const result = await runIndexer(workspace, configPath, apiOrigin);
     assert.equal(result.code, 0, result.stderr);
     const index = JSON.parse(await readFile(join(workspace, 'assets.json'), 'utf8'));
-    assert.equal(index.total, 2);
-    assert.deepEqual(index.data.map(({ path }) => path), [
-      '/docs/forms/logo.png',
-      '/docs/guide.pdf',
-    ]);
-    assert.equal(index.data[0].topic, 'media');
-    assert.equal(index.data[1].topic, 'documents');
-    assert.equal(index.data[1].lastModified, '2023-11-14T22:13:20.000Z');
-    assert.match(index.data[1].content, /Automated PDF content/);
+    assert.deepEqual(index.data.map(({ path }) => path), ['/docs/guide.pdf']);
+    assert.equal(index.data[0].topic, 'documents');
+    assert.equal(index.data[0].lastModified, '2023-11-14T22:13:20.000Z');
+    assert.match(index.data[0].content, /Published PDF content/);
 
     const indexPath = join(workspace, 'assets.json');
     const oldTimestamp = new Date('2000-01-01T00:00:00.000Z');
@@ -181,11 +208,12 @@ test('recursively crawls and deduplicates multiple DA roots', async () => {
     assert.equal(afterUnpublish.code, 0, afterUnpublish.stderr);
     assert.match(
       afterUnpublish.stdout,
-      /Skipped unpreviewed and unpublished \/docs\/guide\.pdf/,
+      /Skipped live-only missing \/docs\/guide\.pdf/,
     );
     const filteredIndex = JSON.parse(await readFile(indexPath, 'utf8'));
-    assert.deepEqual(filteredIndex.data.map(({ path }) => path), ['/docs/forms/logo.png']);
+    assert.deepEqual(filteredIndex.data, []);
     assert.equal(pdfRequests, 1);
+    assert.deepEqual(previewIndex.data.map(({ path }) => path), ['/docs/forms/logo.png']);
 
     const completeIndex = await readFile(join(workspace, 'assets.json'), 'utf8');
     const emptyConfiguration = JSON.parse(await readFile(configPath, 'utf8'));
